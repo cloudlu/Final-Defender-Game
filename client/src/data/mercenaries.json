@@ -1,0 +1,66 @@
+{
+  "mercenaries": [
+    {
+      "id": "merc_flame",
+      "name": "火焰尖兵",
+      "icon": "🔥",
+      "baseQuality": "卓越",
+      "skill": { "name": "喷火器", "type": "single", "coef": 1.76, "interval": 2.0, "aoe": 0, "effect": { "type": "burn", "damage": 4, "duration": 3 } },
+      "desc": "喷火器对单个目标发射火焰，附加点燃"
+    },
+    {
+      "id": "merc_shotgun",
+      "name": "霰弹战士",
+      "icon": "💥",
+      "baseQuality": "卓越",
+      "skill": { "name": "霰弹枪", "type": "spread", "coef": 1.33, "interval": 5.0, "aoe": 0, "count": 3, "effect": null },
+      "desc": "霰弹枪对近距离扇形射击 3 发（合计 400%）"
+    },
+    {
+      "id": "merc_mg",
+      "name": "机枪大兵",
+      "icon": "🔫",
+      "baseQuality": "精良",
+      "skill": { "name": "机枪射击", "type": "single", "coef": 0.45, "interval": 1.0, "aoe": 0, "effect": null },
+      "desc": "机枪对单个目标持续射击（低系数高频）"
+    },
+    {
+      "id": "merc_sniper",
+      "name": "精准狙击手",
+      "icon": "🎯",
+      "baseQuality": "精良",
+      "skill": { "name": "狙击枪", "type": "single", "coef": 0.7, "interval": 2.0, "aoe": 0, "effect": null },
+      "desc": "狙击枪对单个目标高精度射击"
+    },
+    {
+      "id": "merc_chrono",
+      "name": "超时空军团兵",
+      "icon": "🔮",
+      "baseQuality": "完美",
+      "skill": { "name": "能量球", "type": "aoe", "coef": 1.64, "interval": 5.0, "aoe": 1.2, "effect": null },
+      "desc": "发射能量球造成小范围能量伤害"
+    },
+    {
+      "id": "merc_arrow",
+      "name": "哨箭达人",
+      "icon": "🏹",
+      "baseQuality": "完美",
+      "skill": { "name": "哨箭射击", "type": "pierce", "coef": 1.22, "interval": 2.0, "aoe": 0, "effect": { "type": "slow", "factor": 0.5, "duration": 0.5 } },
+      "desc": "哨箭穿透直线，附带短暂减速"
+    }
+  ],
+  "qualityOrder": ["精良", "卓越", "完美", "传说", "绝世", "绝世+3"],
+  "inheritRatio": { "精良": 0.35, "卓越": 0.5, "完美": 0.5, "传说": 0.65, "绝世": 0.85, "绝世+3": 0.85 },
+  "atkBonusByQuality": { "精良": 15, "卓越": 30, "完美": 58, "传说": 90, "绝世": 140, "绝世+3": 200 },
+  "levelAtkBonus": [
+    { "level": 30, "atk": 90 },
+    { "level": 50, "atk": 200 },
+    { "level": 100, "atk": 650 }
+  ],
+  "recruit": {
+    "costPerPull": 100,
+    "currency": "diamond",
+    "shardsPerDup": 2,
+    "shardsToCompose": 10
+  }
+}

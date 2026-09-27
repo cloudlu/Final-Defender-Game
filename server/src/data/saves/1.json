@@ -1,0 +1,120 @@
+{
+  "global": {
+    "levels": {
+      "g_attack": 10,
+      "g_gold": 3,
+      "g_xp": 2,
+      "g_attack_speed": 4
+    },
+    "gold": 6366,
+    "equipment": {
+      "inventory": [
+        {
+          "uid": 1,
+          "refId": "item_crit_amulet",
+          "forgeLv": 0
+        },
+        {
+          "uid": 2,
+          "refId": "item_dragon_armor",
+          "forgeLv": 0
+        },
+        {
+          "uid": 3,
+          "refId": "item_speed_boots",
+          "forgeLv": 0
+        },
+        {
+          "uid": 4,
+          "refId": "item_speed_boots",
+          "forgeLv": 0
+        },
+        {
+          "uid": 5,
+          "refId": "item_iron_shield",
+          "forgeLv": 0
+        },
+        {
+          "uid": 6,
+          "refId": "item_rusty_sword",
+          "forgeLv": 0
+        },
+        {
+          "uid": 7,
+          "refId": "item_sniper_scope",
+          "forgeLv": 0
+        },
+        {
+          "uid": 8,
+          "refId": "item_rusty_sword",
+          "forgeLv": 0
+        },
+        {
+          "uid": 9,
+          "refId": "item_sprint_boots",
+          "forgeLv": 0
+        },
+        {
+          "uid": 10,
+          "refId": "item_sprint_boots",
+          "forgeLv": 0
+        },
+        {
+          "uid": 11,
+          "refId": "item_flame_blade",
+          "forgeLv": 0
+        },
+        {
+          "uid": 12,
+          "refId": "item_frost_crown",
+          "forgeLv": 0
+        },
+        {
+          "uid": 13,
+          "refId": "item_striking_gloves",
+          "forgeLv": 0
+        },
+        {
+          "uid": 14,
+          "refId": "item_iron_helm",
+          "forgeLv": 0
+        },
+        {
+          "uid": 15,
+          "refId": "item_leather_gloves",
+          "forgeLv": 0
+        }
+      ],
+      "nextUid": 16
+    },
+    "petsBar": {
+      "owned": {},
+      "active": null
+    },
+    "daily": {
+      "lastClaimDate": "2026-09-27",
+      "streakDay": 2
+    },
+    "vip": {
+      "vipLevel": 3,
+      "vipExp": 9800,
+      "goldBonus": 0.3
+    },
+    "equipped": {
+      "accessory": 1,
+      "armor": 2,
+      "weapon": 8
+    },
+    "diamond": 200,
+    "mercs": {
+      "owned": {},
+      "deployed": [
+        null,
+        null
+      ]
+    }
+  },
+  "version": 2,
+  "slotId": 1,
+  "timestamp": "2026-09-27T06:54:35.922Z"
+}

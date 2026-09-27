@@ -1,0 +1,49 @@
+# ===== 依赖 =====
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# ===== 构建产物 =====
+dist/
+client/dist/
+server/dist/
+*.tsbuildinfo
+
+# ===== 运行时生成数据（服务端存档/兑换码/VIP 档案）=====
+server/data/
+server/src/data/codes/
+server/src/data/vip/
+
+# ===== 日志 =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== 环境变量 / 密钥 =====
+.env
+.env.*
+!.env.example
+
+# ===== 编辑器 / IDE =====
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ===== 测试 / 覆盖率 =====
+coverage/
+.nyc_output/
+
+# ===== 临时文件 =====
+*.tmp
+*.temp
+.cache/

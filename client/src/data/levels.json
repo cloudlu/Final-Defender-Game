@@ -1,0 +1,299 @@
+{
+  "levels": [
+    {
+      "id": "L1-1",
+      "name": "城市废墟",
+      "brief": "灾变第 3 天。城市沦陷，你带着残部退守最后一道城墙。",
+      "waves": 8,
+      "difficulty": 1,
+      "unlockAfter": null,
+      "enemyWaves": [
+        [
+          "enemy_basic"
+        ],
+        [
+          "enemy_basic",
+          "enemy_basic"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_runner"
+        ],
+        [
+          "enemy_runner",
+          "enemy_runner"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_bucket"
+        ]
+      ],
+      "wallHp": 20,
+      "density": 1,
+      "diamondReward": 50
+    },
+    {
+      "id": "L1-2",
+      "name": "街头巷战",
+      "brief": "灾变第 7 天。物资告急，一支运输队被困在两条街外。",
+      "waves": 10,
+      "difficulty": 1.1,
+      "unlockAfter": "L1-1",
+      "enemyWaves": [
+        [
+          "enemy_basic",
+          "enemy_runner"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_bucket",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_bomber"
+        ],
+        [
+          "enemy_bomber",
+          "enemy_bomber",
+          "enemy_runner"
+        ],
+        [
+          "enemy_basic",
+          "enemy_bomber",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_runner",
+          "enemy_bomber",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_bomber",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_bomber",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_bomber",
+          "enemy_polevault"
+        ]
+      ],
+      "wallHp": 20,
+      "density": 1.3,
+      "diamondReward": 50
+    },
+    {
+      "id": "L1-3",
+      "name": "广场保卫",
+      "brief": "灾变第 15 天。广场聚集了幸存者，天亮前必须守住。",
+      "waves": 12,
+      "difficulty": 1.25,
+      "unlockAfter": "L1-2",
+      "enemyWaves": [
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_bomber"
+        ],
+        [
+          "enemy_flyer",
+          "enemy_flyer",
+          "enemy_basic"
+        ],
+        [
+          "enemy_bucket",
+          "enemy_bucket",
+          "enemy_runner"
+        ],
+        [
+          "enemy_bomber",
+          "enemy_bomber",
+          "enemy_flyer"
+        ],
+        [
+          "enemy_nurse",
+          "enemy_bucket",
+          "enemy_runner"
+        ],
+        [
+          "enemy_flyer",
+          "enemy_flyer",
+          "enemy_bomber",
+          "enemy_runner"
+        ],
+        [
+          "enemy_antenna",
+          "enemy_bomber",
+          "enemy_flyer",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_bomber",
+          "enemy_flyer",
+          "enemy_flyer",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_polevault",
+          "enemy_runner",
+          "enemy_runner"
+        ],
+        [
+          "enemy_nurse",
+          "enemy_antenna",
+          "enemy_bucket",
+          "enemy_polevault"
+        ],
+        [
+          "enemy_flyer",
+          "enemy_polevault",
+          "enemy_bucket",
+          "enemy_bomber"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_bomber",
+          "enemy_bucket",
+          "enemy_flyer"
+        ]
+      ],
+      "wallHp": 22,
+      "density": 1.5,
+      "diamondReward": 75
+    },
+    {
+      "id": "L1-4",
+      "name": "市中心",
+      "brief": "灾变第 30 天。胖尸王的咆哮从市中心传来——决战的信号。",
+      "waves": 15,
+      "difficulty": 1.4,
+      "unlockAfter": "L1-3",
+      "enemyWaves": [
+        [
+          "enemy_basic",
+          "enemy_runner",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_bomber",
+          "enemy_flyer",
+          "enemy_runner"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_bucket",
+          "enemy_bomber"
+        ],
+        [
+          "enemy_flyer",
+          "enemy_flyer",
+          "enemy_polevault"
+        ],
+        [
+          "enemy_bucket",
+          "enemy_bucket",
+          "enemy_bomber",
+          "enemy_runner"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_flyer",
+          "enemy_flyer",
+          "enemy_bomber"
+        ],
+        [
+          "enemy_giant",
+          "enemy_bucket",
+          "enemy_bomber",
+          "enemy_runner"
+        ],
+        [
+          "enemy_flyer",
+          "enemy_flyer",
+          "enemy_bomber",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_polevault",
+          "enemy_bucket",
+          "enemy_runner"
+        ],
+        [
+          "enemy_boar",
+          "enemy_bomber",
+          "enemy_flyer",
+          "enemy_bucket"
+        ],
+        [
+          "enemy_polevault",
+          "enemy_bucket",
+          "enemy_bucket",
+          "enemy_flyer"
+        ],
+        [
+          "enemy_driller",
+          "enemy_polevault",
+          "enemy_bomber",
+          "enemy_flyer"
+        ],
+        [
+          "enemy_bucket",
+          "enemy_polevault",
+          "enemy_bomber",
+          "enemy_flyer"
+        ],
+        [
+          "enemy_giant",
+          "enemy_nurse",
+          "enemy_antenna",
+          "enemy_bucket"
+        ],
+        [
+          "BOSS",
+          "enemy_tank",
+          "enemy_bucket",
+          "enemy_bomber",
+          "enemy_polevault"
+        ]
+      ],
+      "wallHp": 25,
+      "density": 1.8,
+      "diamondReward": 100
+    }
+  ],
+  "elite": {
+    "difficultyMultiplier": 1.6,
+    "rewardMultiplier": 2,
+    "unlockAfter": "L1-4",
+    "brief": "精英难度：变异体全面强化。证明你的防线无懈可击。"
+  }
+}

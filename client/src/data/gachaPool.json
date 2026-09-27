@@ -1,0 +1,39 @@
+{
+  "pools": {
+    "gold": {
+      "name": "金币补给",
+      "currency": "gold",
+      "cost": 1000,
+      "tenDiscount": 0.9,
+      "weights": { "white": 60, "blue": 30, "purple": 9, "orange": 1 }
+    },
+    "diamond": {
+      "name": "钻石补给",
+      "currency": "diamond",
+      "cost": 100,
+      "tenDiscount": 0.9,
+      "weights": { "white": 30, "blue": 45, "purple": 22, "orange": 3 }
+    }
+  },
+  "items": [
+    { "id": "g_item_rusty_sword", "kind": "equipment", "refId": "item_rusty_sword", "rarity": "white", "weight": 40 },
+    { "id": "g_item_iron_shield", "kind": "equipment", "refId": "item_iron_shield", "rarity": "white", "weight": 40 },
+    { "id": "g_item_power_ring", "kind": "equipment", "refId": "item_power_ring", "rarity": "white", "weight": 40 },
+    { "id": "g_item_iron_helm", "kind": "equipment", "refId": "item_iron_helm", "rarity": "white", "weight": 40 },
+    { "id": "g_item_leather_gloves", "kind": "equipment", "refId": "item_leather_gloves", "rarity": "white", "weight": 40 },
+    { "id": "g_item_sprint_boots", "kind": "equipment", "refId": "item_sprint_boots", "rarity": "white", "weight": 40 },
+    { "id": "g_item_speed_boots", "kind": "equipment", "refId": "item_speed_boots", "rarity": "blue", "weight": 20 },
+    { "id": "g_item_flame_blade", "kind": "equipment", "refId": "item_flame_blade", "rarity": "blue", "weight": 20 },
+    { "id": "g_item_sniper_scope", "kind": "equipment", "refId": "item_sniper_scope", "rarity": "blue", "weight": 20 },
+    { "id": "g_item_striking_gloves", "kind": "equipment", "refId": "item_striking_gloves", "rarity": "blue", "weight": 20 },
+    { "id": "g_item_war_helm", "kind": "equipment", "refId": "item_war_helm", "rarity": "blue", "weight": 20 },
+    { "id": "g_item_frost_crown", "kind": "equipment", "refId": "item_frost_crown", "rarity": "purple", "weight": 8 },
+    { "id": "g_item_dragon_armor", "kind": "equipment", "refId": "item_dragon_armor", "rarity": "purple", "weight": 8 },
+    { "id": "g_item_crit_amulet", "kind": "equipment", "refId": "item_crit_amulet", "rarity": "purple", "weight": 8 },
+    { "id": "g_item_midas_gloves", "kind": "equipment", "refId": "item_midas_gloves", "rarity": "orange", "weight": 2 },
+    { "id": "g_item_godslayer", "kind": "equipment", "refId": "item_godslayer", "rarity": "orange", "weight": 2 },
+    { "id": "g_item_time_hourglass", "kind": "equipment", "refId": "item_time_hourglass", "rarity": "orange", "weight": 2 }
+  ],
+  "dupeRefund": { "white": 50, "blue": 150, "purple": 500, "orange": 1500 },
+  "pity": { "threshold": 20, "minRarity": "purple" }
+}

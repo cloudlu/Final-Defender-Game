@@ -1,0 +1,193 @@
+[
+  {
+    "id": "enemy_basic",
+    "name": "普通丧尸",
+    "hp": 100,
+    "speed": 1,
+    "armor": 0,
+    "bounty": 10,
+    "behavior": null,
+    "description": "缓慢逼近的普通僵尸"
+  },
+  {
+    "id": "enemy_runner",
+    "name": "疾跑尸",
+    "hp": 60,
+    "speed": 2.2,
+    "armor": 0,
+    "bounty": 6,
+    "behavior": null,
+    "description": "快速冲刺，血量低"
+  },
+  {
+    "id": "enemy_bucket",
+    "name": "铁桶尸",
+    "hp": 300,
+    "speed": 0.8,
+    "armor": 6,
+    "bounty": 30,
+    "behavior": null,
+    "description": "铁桶护体，高护甲，桶被打掉后降级"
+  },
+  {
+    "id": "enemy_bomber",
+    "name": "自爆尸",
+    "hp": 120,
+    "speed": 1.4,
+    "armor": 0,
+    "bounty": 20,
+    "behavior": {
+      "type": "explode",
+      "radius": 1.5,
+      "damage": 20
+    },
+    "description": "碰墙自爆，额外扣墙血"
+  },
+  {
+    "id": "enemy_flyer",
+    "name": "飞行尸",
+    "hp": 100,
+    "speed": 1.5,
+    "armor": 0,
+    "bounty": 15,
+    "behavior": {
+      "type": "fly"
+    },
+    "description": "低空飞行，免疫冻结"
+  },
+  {
+    "id": "enemy_polevault",
+    "name": "撑杆尸",
+    "hp": 180,
+    "speed": 1,
+    "armor": 2,
+    "bounty": 25,
+    "behavior": {
+      "type": "dash"
+    },
+    "description": "周期性冲刺，快速逼近"
+  },
+  {
+    "id": "enemy_tank",
+    "name": "胖尸王",
+    "hp": 900,
+    "speed": 0.5,
+    "armor": 4,
+    "bounty": 60,
+    "behavior": null,
+    "description": "巨型肉盾，撞击重创城墙"
+  },
+  {
+    "id": "enemy_nurse",
+    "name": "护士僵尸",
+    "hp": 150,
+    "speed": 0.9,
+    "armor": 0,
+    "bounty": 35,
+    "behavior": {
+      "type": "heal_aura",
+      "radius": 2.5,
+      "pctPerSec": 0.03
+    },
+    "resist": {
+      "electric": 0.5,
+      "ice": 0.5
+    },
+    "weak": {
+      "wind": 0.5
+    },
+    "description": "持续恢复周围怪物生命，免疫麻痹，弱风系"
+  },
+  {
+    "id": "enemy_giant",
+    "name": "巨人僵尸",
+    "hp": 800,
+    "speed": 0.55,
+    "armor": 2,
+    "bounty": 70,
+    "behavior": {
+      "type": "enrage",
+      "threshold": 0.5
+    },
+    "resistKnock": 0.9,
+    "description": "难以击退；血量过半狂暴，免疫控制"
+  },
+  {
+    "id": "enemy_boar",
+    "name": "野猪僵尸",
+    "hp": 260,
+    "speed": 1.3,
+    "armor": 1,
+    "bounty": 30,
+    "behavior": {
+      "type": "enrage",
+      "threshold": 0.3
+    },
+    "immuneKnock": true,
+    "description": "免疫击退；血量低于 30% 狂暴"
+  },
+  {
+    "id": "enemy_antenna",
+    "name": "天线僵尸",
+    "hp": 130,
+    "speed": 1,
+    "armor": 0,
+    "bounty": 28,
+    "behavior": null,
+    "dodge": 0.5,
+    "description": "远程攻击；自带 50% 弹道闪避"
+  },
+  {
+    "id": "enemy_driller",
+    "name": "钻地佬",
+    "hp": 220,
+    "speed": 1.2,
+    "armor": 1,
+    "bounty": 32,
+    "behavior": {
+      "type": "burrow",
+      "onHitSpeedBoost": 0.8
+    },
+    "resistFreeze": true,
+    "description": "被攻击后加速钻行，免疫冰冻"
+  },
+  {
+    "id": "enemy_flame",
+    "name": "火焰僵尸",
+    "hp": 160,
+    "speed": 1,
+    "armor": 0,
+    "bounty": 22,
+    "behavior": null,
+    "weak": {
+      "ice": 1
+    },
+    "description": "受到额外 100% 寒冰伤害"
+  },
+  {
+    "id": "enemy_frostbeast",
+    "name": "寒霜兽",
+    "hp": 280,
+    "speed": 0.85,
+    "armor": 2,
+    "bounty": 40,
+    "behavior": null,
+    "weak": {
+      "fire": 2
+    },
+    "description": "受到额外 200% 火焰伤害"
+  },
+  {
+    "id": "enemy_heavy",
+    "name": "沉重僵尸",
+    "hp": 600,
+    "speed": 0.45,
+    "armor": 5,
+    "bounty": 55,
+    "behavior": null,
+    "weak": {
+      "fire": 0.5
+    },
+    "description": "移动缓慢，血量防御高，弱火"
+  }
+]

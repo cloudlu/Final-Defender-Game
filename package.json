@@ -1,0 +1,16 @@
+{
+  "name": "last-line-of-defense",
+  "version": "1.0.0",
+  "private": true,
+  "description": "最后防线 - 塔防 + Roguelike 网页游戏",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build": "cd client && npm run build",
+    "test": "cd client && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

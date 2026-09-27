@@ -1,0 +1,48 @@
+{
+  "bosses": [
+    {
+      "id": "boss_king",
+      "name": "胖尸王",
+      "icon": "🦍",
+      "hp": 3000,
+      "speed": 0.45,
+      "armor": 6,
+      "bounty": 0,
+      "wallDamage": 10,
+      "size": 26,
+      "color": "#cc4444",
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 9,
+          "enemyId": "enemy_basic",
+          "count": 2
+        },
+        {
+          "type": "speedBurst",
+          "interval": 12,
+          "multiplier": 2,
+          "duration": 3,
+          "warnSeconds": 1
+        },
+        {
+          "type": "roar",
+          "interval": 14,
+          "silenceSeconds": 2,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 500,
+        "diamond": 50
+      },
+      "resist": {
+        "fire": 1,
+        "ice": 1
+      },
+      "weak": {},
+      "stageNode": 15,
+      "nameCN": "烈焰掌控者（原型）——完全免疫燃烧/冰系"
+    }
+  ]
+}

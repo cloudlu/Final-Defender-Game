@@ -1,0 +1,173 @@
+[
+  {
+    "id": "item_rusty_sword",
+    "name": "生锈之剑",
+    "rarity": "white",
+    "description": "伤害+5",
+    "slot": "weapon",
+    "effects": [{ "stat": "damage", "type": "add", "value": 5 }],
+    "dropRate": 0.15
+  },
+  {
+    "id": "item_iron_helm",
+    "name": "铁盔",
+    "rarity": "white",
+    "description": "金币+5%",
+    "slot": "helmet",
+    "effects": [{ "stat": "goldBonus", "type": "mul_pct", "value": 0.05 }],
+    "dropRate": 0.14
+  },
+  {
+    "id": "item_leather_gloves",
+    "name": "皮手套",
+    "rarity": "white",
+    "description": "暴击+4%",
+    "slot": "gloves",
+    "effects": [{ "stat": "critRate", "type": "add", "value": 0.04 }],
+    "dropRate": 0.14
+  },
+  {
+    "id": "item_sprint_boots",
+    "name": "疾行靴",
+    "rarity": "white",
+    "description": "攻速+6%",
+    "slot": "boots",
+    "effects": [{ "stat": "attackSpeed", "type": "mul_pct", "value": -0.06 }],
+    "dropRate": 0.14
+  },
+  {
+    "id": "item_iron_shield",
+    "name": "铁盾",
+    "rarity": "white",
+    "description": "射程+1",
+    "slot": "armor",
+    "effects": [{ "stat": "range", "type": "add", "value": 1 }],
+    "dropRate": 0.12
+  },
+  {
+    "id": "item_power_ring",
+    "name": "力量戒指",
+    "rarity": "white",
+    "description": "伤害+8%",
+    "slot": "accessory",
+    "effects": [{ "stat": "damage", "type": "mul_pct", "value": 0.08 }],
+    "dropRate": 0.10
+  },
+  {
+    "id": "item_speed_boots",
+    "name": "疾风靴",
+    "rarity": "blue",
+    "description": "攻速+12%",
+    "slot": "boots",
+    "effects": [{ "stat": "attackSpeed", "type": "mul_pct", "value": -0.12 }],
+    "dropRate": 0.08
+  },
+  {
+    "id": "item_striking_gloves",
+    "name": "连击手套",
+    "rarity": "blue",
+    "description": "暴击+8%",
+    "slot": "gloves",
+    "effects": [{ "stat": "critRate", "type": "add", "value": 0.08 }],
+    "dropRate": 0.08
+  },
+  {
+    "id": "item_war_helm",
+    "name": "战盔",
+    "rarity": "blue",
+    "description": "金币+10%，经验+10%",
+    "slot": "helmet",
+    "effects": [
+      { "stat": "goldBonus", "type": "mul_pct", "value": 0.10 },
+      { "stat": "xpBonus", "type": "mul_pct", "value": 0.10 }
+    ],
+    "dropRate": 0.08
+  },
+  {
+    "id": "item_flame_blade",
+    "name": "烈焰之刃",
+    "rarity": "blue",
+    "description": "伤害+15",
+    "slot": "weapon",
+    "effects": [{ "stat": "damage", "type": "add", "value": 15 }],
+    "dropRate": 0.06
+  },
+  {
+    "id": "item_sniper_scope",
+    "name": "狙击镜",
+    "rarity": "blue",
+    "description": "射程+2，暴击+10%",
+    "slot": "weapon",
+    "effects": [
+      { "stat": "range", "type": "add", "value": 2 },
+      { "stat": "critRate", "type": "add", "value": 0.10 }
+    ],
+    "dropRate": 0.05
+  },
+  {
+    "id": "item_frost_crown",
+    "name": "冰霜之冠",
+    "rarity": "purple",
+    "description": "减速效果+20%",
+    "slot": "accessory",
+    "effects": [{ "stat": "slowPct", "type": "add", "value": 0.20 }],
+    "dropRate": 0.04
+  },
+  {
+    "id": "item_dragon_armor",
+    "name": "龙鳞甲",
+    "rarity": "purple",
+    "description": "伤害+25%，攻速+15%",
+    "slot": "armor",
+    "effects": [
+      { "stat": "damage", "type": "mul_pct", "value": 0.25 },
+      { "stat": "attackSpeed", "type": "mul_pct", "value": -0.15 }
+    ],
+    "dropRate": 0.03
+  },
+  {
+    "id": "item_crit_amulet",
+    "name": "暴击护符",
+    "rarity": "purple",
+    "description": "暴击率+20%，暴击伤害+80%",
+    "slot": "accessory",
+    "effects": [
+      { "stat": "critRate", "type": "add", "value": 0.20 },
+      { "stat": "critDamage", "type": "mul_pct", "value": 0.80 }
+    ],
+    "dropRate": 0.03
+  },
+  {
+    "id": "item_midas_gloves",
+    "name": "点金手套",
+    "rarity": "orange",
+    "description": "击杀金币+100%",
+    "slot": "accessory",
+    "effects": [{ "stat": "goldBonus", "type": "mul_pct", "value": 1.00 }],
+    "dropRate": 0.02
+  },
+  {
+    "id": "item_godslayer",
+    "name": "弑神者",
+    "rarity": "orange",
+    "description": "伤害+50%，暴击+25%",
+    "slot": "weapon",
+    "effects": [
+      { "stat": "damage", "type": "mul_pct", "value": 0.50 },
+      { "stat": "critRate", "type": "add", "value": 0.25 }
+    ],
+    "dropRate": 0.01
+  },
+  {
+    "id": "item_time_hourglass",
+    "name": "时光沙漏",
+    "rarity": "orange",
+    "description": "攻速+30%，射程+3",
+    "slot": "accessory",
+    "effects": [
+      { "stat": "attackSpeed", "type": "mul_pct", "value": -0.30 },
+      { "stat": "range", "type": "add", "value": 3 }
+    ],
+    "dropRate": 0.01
+  }
+]

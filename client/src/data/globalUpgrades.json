@@ -1,0 +1,64 @@
+{
+  "upgrades": [
+    {
+      "id": "g_attack",
+      "name": "攻击强化",
+      "icon": "⚔️",
+      "stat": "damage",
+      "type": "mul_pct",
+      "perLevel": 0.05,
+      "maxLevel": 10,
+      "baseCost": 200,
+      "costScale": 1.35,
+      "description": "全局伤害 +5%/级"
+    },
+    {
+      "id": "g_wall",
+      "name": "城墙加固",
+      "icon": "🛡️",
+      "stat": "wallHp",
+      "type": "add",
+      "perLevel": 4,
+      "maxLevel": 10,
+      "baseCost": 300,
+      "costScale": 1.4,
+      "description": "城墙血量 +4/级"
+    },
+    {
+      "id": "g_attack_speed",
+      "name": "射速强化",
+      "icon": "🌀",
+      "stat": "attackSpeed",
+      "type": "mul_pct",
+      "perLevel": -0.03,
+      "maxLevel": 5,
+      "baseCost": 400,
+      "costScale": 1.45,
+      "description": "攻击间隔 -3%/级"
+    },
+    {
+      "id": "g_xp",
+      "name": "经验加成",
+      "icon": "⭐",
+      "stat": "xpBonus",
+      "type": "mul_pct",
+      "perLevel": 0.05,
+      "maxLevel": 5,
+      "baseCost": 500,
+      "costScale": 1.5,
+      "description": "经验获取 +5%/级"
+    },
+    {
+      "id": "g_gold",
+      "name": "金币加成",
+      "icon": "💰",
+      "stat": "goldBonus",
+      "type": "mul_pct",
+      "perLevel": 0.05,
+      "maxLevel": 5,
+      "baseCost": 400,
+      "costScale": 1.45,
+      "description": "金币获取 +5%/级"
+    }
+  ]
+}
