@@ -77,11 +77,11 @@ describe('WaveManager density', () => {
     expect(dense.startWave(rng).count).toBe(sparse.startWave(rng).count * 2);
   });
 
-  it('spawn interval shrinks with density (floor 0.25)', () => {
+  it('spawn interval shrinks with density (floor 0.15)', () => {
     const base = { levelId: 'T', name: 'T', brief: '', enemyWaves: [['enemy_basic']], difficulty: 1, elite: false, wallHp: 20, totalWaves: 1 };
     const rng = new SeededRNG(7);
     const dense = new WaveManager(balanceConfig, enemyConfigs, { ...base, density: 99 });
     dense.startWave(rng);
-    expect(dense.spawnInterval).toBe(0.25);
+    expect(dense.spawnInterval).toBe(0.15);
   });
 });

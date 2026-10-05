@@ -9,16 +9,21 @@ const RARITY_ORDER = { white: 0, blue: 1, purple: 2, orange: 3 };
  * 抽卡结果：装备 → 仓库；佣兵 → 酒馆（重复=碎片）。
  */
 export class GachaSystem {
-  constructor(equipmentConfigs, save = null, config = gachaConfig, forgeSystem = null, mercenarySystem = null) {
+  constructor(equipmentConfigs, save = null, config = gachaConfig, forgeSystem = null, mercenarySystem = null, gemSystem = null) {
     this.config = config;
     this.equipmentConfigs = equipmentConfigs;
     this.forgeSystem = forgeSystem;
     this.mercenarySystem = mercenarySystem;
+    this.gemSystem = gemSystem;
     this.save = save || {
       ownedRefIds: [],
       pity: { gold: 0, diamond: 0 },
       totalPulls: 0,
     };
+    // 存档缺省骨架（旧档无 pity/ownedRefIds 等字段时兜底）
+    this.save.ownedRefIds = this.save.ownedRefIds || [];
+    this.save.pity = this.save.pity || { gold: 0, diamond: 0 };
+    this.save.totalPulls = this.save.totalPulls || 0;
   }
 
   getPool(poolId) {
@@ -67,11 +72,22 @@ export class GachaSystem {
       if (RARITY_ORDER[rarity] >= RARITY_ORDER[this.config.pity.minRarity]) pity = 0;
 
       const item = this._pickItemOfRarity(rarity, rng);
-      // 20% 概率翻成佣兵招募券（对齐原版：酒馆是抽卡的一部分）
+      // 30% 特殊掉落：佣兵 20% / 宝石 10%（稀有度映射保底品质；走 GemSystem 统一生成，
+      // 尊重词条 minQuality 门槛——旧逻辑直捣全词条池会产生"至尊词条白品质 +0"废宝石）
       const specialRoll = rng.next();
-      if (specialRoll < 0.2 && this.mercenarySystem) {
+      if (specialRoll < 0.1 && this.gemSystem) {
+        const qMap = { white: 0, blue: 2, purple: 3, orange: 4 };
+        const keepRng = { next: () => rng.next() };
+        const gem = this.gemSystem.generate(keepRng, null, qMap[rarity] ?? 0);
+        const affix = this.gemSystem.getAffix(gem.affixId);
+        results.push({
+          item: { id: `gem_${gem.uid}`, refId: gem.uid, rarity, gemUid: gem.uid, gemAffix: affix?.name || gem.affixId, gemQuality: gem.quality },
+          isNew: true, refund: 0,
+        });
+        continue;
+      } else if (specialRoll < 0.3 && this.mercenarySystem) {
         const mercPool = mercData.mercenaries;
-        const mercCfg = mercPool[rng.nextInt(0, mercPool.length - 1)];
+        const mercCfg = mercPool[Math.floor(rng.next() * mercPool.length)]; // rng 契约只需 next()
         const acq = this.mercenarySystem.acquire(mercCfg.id);
         results.push({
           item: { id: `merc_${mercCfg.id}`, refId: mercCfg.id, rarity, mercId: mercCfg.id, mercIcon: mercCfg.icon, mercName: mercCfg.name },

@@ -64,6 +64,22 @@ export class Enemy {
     this._healTimer = 0;
     this._onHitSpeedBoost = this.behavior?.type === 'burrow' ? (this.behavior.onHitSpeedBoost || 0) : 0;
 
+    // BOSS 原版机制字段
+    this.elementImmune = !!config.elementImmune;   // 元素破解者：免疫所有元素伤害
+    this.freezeHeal = !!config.freezeHeal;         // 深海巨兽：冻结时回血
+    this.healOnHurt = !!config.healOnHurt;         // 巨魔首领：受伤后持续回血
+    this._healOnHurtTimer = 0;
+    // 新机制字段（v5.9 小怪表对齐）
+    this.revivesLeft = config.revives || 0;              // 木乃伊：复活次数
+    this.deathHealAura = config.deathHealAura || 0;      // 护士/咸鱼：死亡时治疗周围 pct
+    this.negativeTimeResist = config.negativeTimeResist || 0; // 胆小：负面时间 -100%
+    this.blocksProjectiles = !!config.blocksProjectiles; // 墓碑/寒霜兽：阻挡弹道
+    this.stunImmune = !!config.stunImmune;               // 傀儡：免疫眩晕
+    this.burnImmune = !!config.burnImmune;               // 火焰僵尸/巨齿鲨：免疫燃烧
+    this.negativeResist = !!config.negativeResist;       // 咸鱼/木乃伊：免疫负面状态
+    this._bandageState = this.behavior?.type === 'bandage_heal' ? 'normal' : null;
+    this._bandageTimer = 0;
+    this._vampireHeal = this.behavior?.type === 'vampire';
     // BOSS 字段（isBoss 由 WaveManager 设置）
     this.isBoss = config.isBoss || false;
     this.bossSkills = config.bossSkills || null; // [{type,interval,...}]
@@ -130,6 +146,34 @@ export class Enemy {
       }
     }
 
+    // 巨魔首领：受伤后 5 秒内持续回血（原版机制）
+    if (this.healOnHurt) {
+      if (this._healOnHurtTimer > 0) {
+        this._healOnHurtTimer -= dt;
+        this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.02 * dt); // 2%/s
+      }
+    }
+
+    // 绷带僵尸精英：血 <30% 停走 5 秒回 50% 血（原版机制，一次性）
+    if (this._bandageState === 'normal' && this.behavior?.type === 'bandage_heal'
+      && this.hp / this.maxHp <= (this.behavior.threshold ?? 0.3)) {
+      this._bandageState = 'healing';
+      this._bandageTimer = 5;
+    }
+    if (this._bandageState === 'healing') {
+      this._bandageTimer -= dt;
+      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.1 * dt); // 50% / 5s = 10%/s
+      if (this._bandageTimer <= 0) {
+        this._bandageState = 'done';
+      }
+      return; // 恢复期间停止移动
+    }
+
+    // 嗜血僵尸精英：吸血（接近敌人时持续回血由 GameState 判定，这里实现为每秒自回 1%）
+    if (this._vampireHeal && this.hp < this.maxHp) {
+      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.01 * dt);
+    }
+
     // BOSS speedBurst：预警（warnTimer）后爆发
     if (this.speedBurst.timer > 0) {
       this.speedBurst.timer -= dt;
@@ -172,6 +216,7 @@ export class Enemy {
       return false; // miss
     }
     let mult = 1;
+    if (this.elementImmune && element) return false; // 元素破解者：免疫所有元素伤害
     if (element) {
       if (this.resist[element]) mult -= this.resist[element];      // 抗性减免
       if (this.weak?.[element]) mult += this.weak[element];        // 弱点增伤
@@ -179,6 +224,9 @@ export class Enemy {
     const actual = Math.max(1, damage * mult - this.armor);
     this.hp -= actual;
     this.hitFlash = 1;
+    // 深海巨兽：被冻结会回血；巨魔首领：受伤后回血
+    if (this.freezeHeal && this.frozen) this.hp = Math.min(this.maxHp, this.hp + actual * 0.5);
+    if (this.healOnHurt) this._healOnHurtTimer = 5; // 5 秒内持续回血标记
     // 狂暴免疫控制（巨人狂暴后）：清空控制态
     if (this.enraged) {
       this.stunTimer = 0;
@@ -200,6 +248,16 @@ export class Enemy {
     if (this._onHitSpeedBoost > 0) {
       this.speed += this._onHitSpeedBoost * 0.1;
     }
+    // 木乃伊：死亡复活（血量递减 33%，最多 N 次）
+    if (this.hp <= 0 && this.revivesLeft > 0) {
+      this.revivesLeft--;
+      this.maxHp = Math.round(this.maxHp * 0.67);
+      this.hp = this.maxHp;
+      this.alive = true;
+      this.stunTimer = 0;
+      this.frozen = false;
+      return false; // 复活不算死亡
+    }
     if (this.hp <= 0) { this.alive = false; return true; }
     return false;
   }
@@ -217,7 +275,8 @@ export class Enemy {
   /** 冻结（干冰弹/冰暴）：免疫单位无效（飞行员/钻地佬）；狂暴巨人免疫控制 */
   freeze(duration) {
     if (this.resistFreeze || this.enraged) return;
-    this.stunTimer = Math.max(this.stunTimer, duration);
+    if (this.negativeTimeResist >= 1) return; // 负面时间-100%：完全免疫
+    this.stunTimer = Math.max(this.stunTimer, duration * (1 - this.negativeTimeResist));
     this.frozen = true;
   }
 

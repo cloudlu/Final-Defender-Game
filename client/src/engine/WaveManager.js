@@ -27,7 +27,8 @@ export class WaveManager {
       * (1 + (this.currentWave - 1) * this.balance.difficultyScalePerWave);
 
     this.spawnQueue = [];
-    this.spawnInterval = Math.max(0.25, (0.7 - this.currentWave * 0.02) / (this.level?.density || 1));
+    // 原版尸潮规模：出怪高频持续（间隔下限 0.15s），波次前 70% 时间刷完
+    this.spawnInterval = Math.max(0.15, (0.5 - this.currentWave * 0.015) / (this.level?.density || 1));
 
     let composition;
     const isFinalWave = this.level && this.currentWave >= this.level.totalWaves;
@@ -37,8 +38,8 @@ export class WaveManager {
       // 终波含 "BOSS" 标记 → 该波由 GameState 附加生成 BOSS
       this.bossWave = isFinalWave && kinds.includes('BOSS');
       const normalKinds = kinds.filter(k => k !== 'BOSS');
-      // 波内数量：每种敌人基数 3 只 × 密度倍数（终波 ×4 基数）
-      const perKind = Math.round((isFinalWave ? 4 : 3) * (this.level.density || 1));
+      // 波内数量：每种敌人基数 8 只（终波 10）× 密度倍数——对齐原版尸潮
+      const perKind = Math.round((isFinalWave ? 10 : 8) * (this.level.density || 1));
       composition = [];
       for (const kind of normalKinds) {
         for (let i = 0; i < perKind; i++) composition.push(kind);

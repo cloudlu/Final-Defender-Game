@@ -13,6 +13,7 @@ server/dist/
 server/data/
 server/src/data/codes/
 server/src/data/vip/
+server/src/data/saves/
 
 # ===== 日志 =====
 logs/

@@ -72,6 +72,8 @@ export class DailyRewardSystem {
 
     if (reward.type === 'gold') balances.gold = (balances.gold || 0) + reward.amount;
     else if (reward.type === 'diamond') balances.diamond = (balances.diamond || 0) + reward.amount;
+    else if (reward.type === 'stone') balances.forgeStones = (balances.forgeStones || 0) + reward.amount;
+    else if (reward.type === 'notes') balances.gunNotes = (balances.gunNotes || 0) + reward.amount;
 
     // 连签推进（同池循环）
     this.save.streakDay = day;

@@ -16,6 +16,19 @@ export const ENEMY_DEFS = {
   enemy_flame:     { kind: 'flame',   color: 0xff7733, outline: 0xaa3311, emoji: '🔥', size: 12 },
   enemy_frostbeast:{ kind: 'frostbeast', color: 0x66aaff, outline: 0x3366aa, emoji: '🧊', size: 15 },
   enemy_heavy:     { kind: 'heavy',   color: 0x556677, outline: 0x2a3344, emoji: '🏋️', size: 17 },
+  enemy_fish:      { kind: 'fish',    color: 0x77aacc, outline: 0x3a6688, emoji: '🐟', size: 13 },
+  enemy_mummy:     { kind: 'mummy',   color: 0xddddbb, outline: 0x999977, emoji: '🧻', size: 13 },
+  enemy_tomb:      { kind: 'tomb',    color: 0x777788, outline: 0x444455, emoji: '🪦', size: 15 },
+  enemy_clown:     { kind: 'clown',   color: 0xdd6688, outline: 0x883355, emoji: '🤡', size: 12 },
+  enemy_timid:     { kind: 'timid',   color: 0xaadd88, outline: 0x668855, emoji: '🐔', size: 10 },
+  enemy_puppet:    { kind: 'puppet',  color: 0xbb9977, outline: 0x776644, emoji: '🎭', size: 13 },
+  enemy_tennis:    { kind: 'tennis',  color: 0x88cc44, outline: 0x448822, emoji: '🎾', size: 12 },
+  enemy_bomb:      { kind: 'bomb2',   color: 0xcc8844, outline: 0x774422, emoji: '🧨', size: 12 },
+  enemy_flame2:    { kind: 'flame2',  color: 0xff6633, outline: 0xaa2211, emoji: '🌋', size: 12 },
+  enemy_lizard:    { kind: 'lizard',  color: 0xffff44, outline: 0xaaaa00, emoji: '🦎', size: 14 },
+  enemy_bandage:   { kind: 'bandage', color: 0xeeeecc, outline: 0xaaaa88, emoji: '🩹', size: 14 },
+  enemy_shark:     { kind: 'shark',   color: 0x4488cc, outline: 0x224477, emoji: '🦈', size: 18 },
+  enemy_vampire:   { kind: 'vampire', color: 0x883355, outline: 0x441122, emoji: '🧛', size: 13 },
 };
 
 /**

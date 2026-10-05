@@ -18,23 +18,23 @@ export class LevelClearOverlay {
 
     const cx = width / 2, cy = height / 2;
 
-    const title = this.scene.add.text(cx, cy - 170, '🏆 关卡通关!', {
-      fontSize: '32px', fill: '#ffdd44', fontFamily: 'Arial', fontStyle: 'bold',
+    const title = this.scene.add.text(cx, cy - 200, '🏆 关卡通关!', {
+      fontSize: '30px', fill: '#ffdd44', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5);
     this.container.add(title);
 
-    this.container.add(this.scene.add.text(cx, cy - 125, `${result.levelName}${result.elite ? ' · 精英' : ''}`, {
+    this.container.add(this.scene.add.text(cx, cy - 158, `${result.levelName}${result.elite ? ' · 精英' : ''}`, {
       fontSize: '16px', fill: '#66ccff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5));
 
     // 星级逐颗弹出
-    const starY = cy - 65;
+    const starY = cy - 105;
     const starGap = 70;
     for (let i = 0; i < 3; i++) {
       const earned = i < result.stars;
       const star = this.scene.add.text(cx + (i - 1) * starGap, starY, earned ? '⭐' : '☆', {
-        fontSize: '48px',
+        fontSize: '44px',
       }).setOrigin(0.5).setAlpha(earned ? 0 : 1).setScale(earned ? 2.2 : 1);
       this.container.add(star);
       if (earned) {
@@ -46,49 +46,63 @@ export class LevelClearOverlay {
     }
 
     if (result.newRecord) {
-      this.container.add(this.scene.add.text(cx, starY + 48, '✨ 新纪录!', {
-        fontSize: '14px', fill: '#ff88ff', fontFamily: 'Arial', fontStyle: 'bold',
+      this.container.add(this.scene.add.text(cx, starY + 44, '✨ 新纪录!', {
+        fontSize: '13px', fill: '#ff88ff', fontFamily: 'Arial', fontStyle: 'bold',
       }).setOrigin(0.5));
     }
 
-    this.container.add(this.scene.add.text(cx, cy + 15, `分数 ${result.score}  ·  金币 +${result.goldEarned ?? 0}  ·  钻石 +${result.diamondEarned ?? 0}`, {
-      fontSize: '14px', fill: '#88ff88', fontFamily: 'Arial',
+    this.container.add(this.scene.add.text(cx, cy - 25, `分数 ${result.score}  ·  金币 +${result.goldEarned ?? 0}  ·  钻石 +${result.diamondEarned ?? 0}`, {
+      fontSize: '13px', fill: '#88ff88', fontFamily: 'Arial',
     }).setOrigin(0.5));
+
+    // 剧情解锁文本（对齐原版：通关解锁剧情）
+    if (result.storyUnlock) {
+      const storyBg = this.scene.add.graphics();
+      storyBg.fillStyle(0x101826, 0.95);
+      storyBg.fillRoundedRect(cx - 240, cy + 5, 480, 74, 8);
+      storyBg.lineStyle(1, 0x4466aa, 1);
+      storyBg.strokeRoundedRect(cx - 240, cy + 5, 480, 74, 8);
+      this.container.add(storyBg);
+      this.container.add(this.scene.add.text(cx - 225, cy + 13, '📖 剧情解锁', {
+        fontSize: '11px', fill: '#66aaff', fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0, 0));
+      this.container.add(this.scene.add.text(cx, cy + 42, result.storyUnlock, {
+        fontSize: '11px', fill: '#ccddee', fontFamily: 'Arial',
+        wordWrap: { width: 460 }, align: 'center', lineSpacing: 3,
+      }).setOrigin(0.5));
+    }
 
     // 本局装备处理（原版式：结算时统一穿/分解）
     const loot = result.loot || [];
     if (loot.length > 0 && actions.onLootResolve) {
-      const lootY = cy + 48;
-      this.container.add(this.scene.add.text(cx, lootY - 16, `📦 本局获得装备（${loot.length} 件）— 逐件处理：`, {
-        fontSize: '12px', fill: '#88ddff', fontFamily: 'Arial', fontStyle: 'bold',
+      const lootY = cy + 100;
+      this.container.add(this.scene.add.text(cx, lootY - 14, `📦 本局获得装备（${loot.length} 件）— 逐件处理：`, {
+        fontSize: '11px', fill: '#88ddff', fontFamily: 'Arial', fontStyle: 'bold',
       }).setOrigin(0.5));
-      this.lootRows = [];
-      loot.slice(0, 4).forEach((item, i) => {
-        const rowY = lootY + 14 + i * 40;
+      loot.slice(0, 3).forEach((item, i) => {
+        const rowY = lootY + 14 + i * 34;
         const RARITY_COLOR = { white: 0xaaaaaa, blue: 0x4488ff, purple: 0xaa44ff, orange: 0xff8800 };
         const rc = RARITY_COLOR[item.rarity] || 0xaaaaaa;
         const g = this.scene.add.graphics();
         g.fillStyle(0x18202f, 0.95);
-        g.fillRoundedRect(cx - 235, rowY - 16, 470, 34, 6);
+        g.fillRoundedRect(cx - 235, rowY - 14, 470, 30, 6);
         g.lineStyle(1, rc, 1);
-        g.strokeRoundedRect(cx - 235, rowY - 16, 470, 34, 6);
+        g.strokeRoundedRect(cx - 235, rowY - 14, 470, 30, 6);
         this.container.add(g);
         this.container.add(this.scene.add.text(cx - 220, rowY, item.name, {
-          fontSize: '13px', fill: `#${rc.toString(16).padStart(6, '0')}`, fontFamily: 'Arial', fontStyle: 'bold',
+          fontSize: '12px', fill: `#${rc.toString(16).padStart(6, '0')}`, fontFamily: 'Arial', fontStyle: 'bold',
         }).setOrigin(0, 0.5));
-        this.container.add(this.scene.add.text(cx - 60, rowY, `[${item.slot === 'weapon' ? '武器' : item.slot === 'armor' ? '护甲' : '饰品'}] ${item.description}`, {
-          fontSize: '11px', fill: '#ccccdd', fontFamily: 'Arial',
+        this.container.add(this.scene.add.text(cx - 60, rowY, `[${item.slot}] ${item.description}`, {
+          fontSize: '10px', fill: '#ccccdd', fontFamily: 'Arial',
         }).setOrigin(0, 0.5));
-        // 穿戴 / 分解
-        const wearBtn = this.scene.add.rectangle(cx + 130, rowY, 80, 26, 0x00aa44).setInteractive({ useHandCursor: true }).setDepth(651);
+        const wearBtn = this.scene.add.rectangle(cx + 150, rowY, 70, 24, 0x00aa44).setInteractive({ useHandCursor: true }).setDepth(651);
         this.container.add(wearBtn);
-        this.container.add(this.scene.add.text(cx + 130, rowY, '穿戴', { fontSize: '12px', fill: '#fff', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(652));
-        const scrapBtn = this.scene.add.rectangle(cx + 215, rowY, 80, 26, 0x884444).setInteractive({ useHandCursor: true }).setDepth(651);
+        this.container.add(this.scene.add.text(cx + 150, rowY, '穿戴', { fontSize: '11px', fill: '#fff', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(652));
+        const scrapBtn = this.scene.add.rectangle(cx + 225, rowY, 70, 24, 0x884444).setInteractive({ useHandCursor: true }).setDepth(651);
         this.container.add(scrapBtn);
-        this.container.add(this.scene.add.text(cx + 215, rowY, '分解', { fontSize: '12px', fill: '#fff', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(652));
+        this.container.add(this.scene.add.text(cx + 225, rowY, '分解', { fontSize: '11px', fill: '#fff', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(652));
         const handle = (wear) => {
           actions.onLootResolve(item, wear);
-          // 行灰化
           g.setAlpha(0.3);
           wearBtn.disableInteractive().setFillStyle(0x333333);
           scrapBtn.disableInteractive().setFillStyle(0x333333);
@@ -99,7 +113,7 @@ export class LevelClearOverlay {
     }
 
     // 按钮
-    const btnY = cy + 175;
+    const btnY = cy + 215;
     this._button(cx - 130, btnY, 140, 44, '🔁 再来一次', 0x555577, actions.onRetry);
     if (result.hasNext) {
       this._button(cx + 10, btnY, 160, 44, '▶ 下一关', 0x00aa44, actions.onNext);

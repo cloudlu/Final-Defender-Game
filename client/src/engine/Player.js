@@ -102,7 +102,7 @@ export class Player {
     // ===== 原版技能表对齐（系数/冷却来自原版数据）=====
     // 类型：projectile 弹道 / zone 地面区域 / pierceLine 直线穿透 / cone 扇形击退 / beam 激光 / guided 制导 / sweep 召唤横穿 / airstrike 空投 / drone 召唤
     this.skills = [
-      { id: 'attack', name: '枪械', icon: '🔫', type: 'gun', baseDamage: 8, baseCooldown: 0.3, baseAoe: 0, baseChain: 0, baseEffect: null, range: 99, unlocked: true, level: 1, desc: '基础枪械，弹匣 30 发' },
+      { id: 'attack', name: '枪械', icon: '🔫', type: 'gun', baseDamage: 20, baseCooldown: 0.3, baseAoe: 0, baseChain: 0, baseEffect: null, range: 99, unlocked: true, level: 1, desc: '基础枪械，弹匣 30 发' },
       { id: 'thermobaric', name: '温压弹', icon: '💥', type: 'projectile', baseDamage: 32, baseCooldown: 6.2, baseAoe: 2.2, baseChain: 0, baseEffect: { type: 'burn', damage: 6, duration: 2 }, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'fire', desc: '落地大范围爆炸+灼烧，清潮核心' },
       { id: 'fuelbomb', name: '燃油弹', icon: '🔥', type: 'zone', baseDamage: 30, baseCooldown: 4.0, baseAoe: 2.8, baseChain: 0, baseEffect: { type: 'burn', damage: 9, duration: 4.1 }, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'fire', desc: 'T0：地面留持续火区，高伤大范围' },
       { id: 'empierce', name: '电磁穿刺', icon: '⚡', type: 'pierceLine', baseDamage: 30, baseCooldown: 3.8, baseAoe: 0, baseChain: 0, baseEffect: { type: 'stun', duration: 0.6 }, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'electric', desc: '直线穿透+麻痹' },
@@ -115,6 +115,9 @@ export class Player {
       { id: 'vehicle', name: '装甲车', icon: '🚛', type: 'sweep', baseDamage: 55, baseCooldown: 17.4, baseAoe: 0.8, baseChain: 0, baseEffect: { type: 'stun', duration: 0.5 }, range: 99, unlocked: false, level: 0, rarity: 'orange', element: 'physical', desc: '沿直线碾压穿透，概率眩晕' },
       { id: 'airstrike', name: '空投轰炸', icon: '🎯', type: 'airstrike', baseDamage: 60, baseCooldown: 7.7, baseAoe: 2.6, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'physical', desc: '高系数物理轰炸' },
       { id: 'drone', name: '无人机冲击', icon: '🛸', type: 'drone', baseDamage: 20, baseCooldown: 10.0, baseAoe: 1.2, baseChain: 0, baseEffect: { type: 'slow', factor: 0.2, duration: 0.5 }, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'physical', desc: '无人机轰炸，命中减速 80%' },
+      // === C 档扩展（原版补充技能） ===
+      { id: 'leapwave', name: '跃迁电子', icon: '🔆', type: 'pierceLine', baseDamage: 25, baseCooldown: 3.8, baseAoe: 1.0, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'electric', desc: '电子束直线穿透+溅射' },
+      { id: 'rift', name: '时空裂隙', icon: '🕳️', type: 'zone', baseDamage: 12, baseCooldown: 8.0, baseAoe: 2.2, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'energy', desc: '裂隙持续撕裂区域内的敌人' },
       // === 子弹强化线（原版枪械词条） ===
       { id: 'multishot', name: '连射', icon: '🔀', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'blue', desc: '基础射击 +1 发扇形弹' },
       { id: 'pierce', name: '穿透', icon: '🎯', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'blue', desc: '基础射击可穿透 +1 名敌人' },
@@ -197,8 +200,20 @@ export class Player {
     if (this.autoAttackTimer > 0) return null;
     const sorted = enemies.filter(e => e.alive).sort((a, b) => b.row - a.row);
     if (sorted.length === 0) return null;
+    const shot = this.useSkill('attack');
+    if (!shot) return null; // 枪械冷却/沉默未就绪：不消耗射击间隔，下帧重试
     this.autoAttackTimer = this.autoAttackInterval;
-    return this.useSkill('attack');
+    return shot;
+  }
+
+  /** 同步枪械射击节奏：攻速加成同时作用于射击间隔与枪械自身冷却（否则间隔<冷却时节拍性漏射）。取整防浮点尾数泄漏到 UI */
+  setAttackCadence(interval) {
+    this.autoAttackInterval = Math.round(interval * 1000) / 1000;
+    const gun = this.skills.find(s => s.id === 'attack');
+    if (gun) {
+      gun.cooldown = Math.round(this.autoAttackInterval * Math.pow(LEVEL_CD_SCALE, Math.max(0, gun.level - 1)) * 1000) / 1000;
+      gun.currentCooldown = Math.min(gun.currentCooldown, gun.cooldown);
+    }
   }
 
   addXp(amount) {
@@ -271,18 +286,25 @@ export class Player {
           rarity: skill.rarity || 'blue', description: `解锁技能：${skill.desc}`,
         });
       } else if (skill.level < MAX_SKILL_LEVEL) {
-        const rangeTxt = (skill.baseAoe > 0 && skill.baseAoe < 90) ? ' · 范围+0.3' : '';
-        const chainTxt = skill.baseChain > 0 && (skill.level + 1 - 1) % 2 === 0 ? ' · 链+1' : '';
-        // 升级预览：当前 → 下一级 具体数值（对齐原版图鉴感）
-        const curDmg = skill.damage;
-        const nextDmg = Math.round(curDmg * LEVEL_DMG_SCALE * 100) / 100;
-        const curCd = skill.cooldown;
-        const nextCd = Math.round(curCd * LEVEL_CD_SCALE * 100) / 100;
+        // 升级预览：按技能类型显示对应效果（被动无伤害/冷却，显示自身机制成长）
+        let description;
+        if (skill.type === 'passive') {
+          description = skill.desc; // 被动升级 = 机制效果增强（如连射弹数+1），直接用描述
+        } else {
+          const rangeTxt = (skill.baseAoe > 0 && skill.baseAoe < 90) ? ' · 范围+0.3' : '';
+          const chainTxt = skill.baseChain > 0 && (skill.level + 1 - 1) % 2 === 0 ? ' · 链+1' : '';
+          // 升级预览：当前 → 下一级 具体数值（对齐原版图鉴感）
+          const curDmg = skill.damage;
+          const nextDmg = Math.round(curDmg * LEVEL_DMG_SCALE * 100) / 100;
+          const curCd = skill.cooldown;
+          const nextCd = Math.round(curCd * LEVEL_CD_SCALE * 100) / 100;
+          description = `伤害 ${curDmg}→${nextDmg} · 冷却 ${curCd}s→${nextCd}s${rangeTxt}${chainTxt}`;
+        }
         options.push({
           kind: 'skillUp', id: skill.id, icon: skill.icon,
           name: `${skill.name} Lv.${skill.level} → Lv.${skill.level + 1}`,
           rarity: LEVEL_RARITY[skill.level + 1] || 'blue',
-          description: `伤害 ${curDmg}→${nextDmg} · 冷却 ${curCd}s→${nextCd}s${rangeTxt}${chainTxt}`,
+          description,
         });
       }
     }

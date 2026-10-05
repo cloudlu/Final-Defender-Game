@@ -5,8 +5,15 @@
     "rarity": "white",
     "description": "伤害+5",
     "slot": "weapon",
-    "effects": [{ "stat": "damage", "type": "add", "value": 5 }],
-    "dropRate": 0.15
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "add",
+        "value": 5
+      }
+    ],
+    "dropRate": 0.15,
+    "baseAtk": 20
   },
   {
     "id": "item_iron_helm",
@@ -14,62 +21,111 @@
     "rarity": "white",
     "description": "金币+5%",
     "slot": "helmet",
-    "effects": [{ "stat": "goldBonus", "type": "mul_pct", "value": 0.05 }],
-    "dropRate": 0.14
+    "effects": [
+      {
+        "stat": "goldBonus",
+        "type": "mul_pct",
+        "value": 0.05
+      }
+    ],
+    "dropRate": 0.14,
+    "baseAtk": 20
   },
   {
     "id": "item_leather_gloves",
     "name": "皮手套",
     "rarity": "white",
     "description": "暴击+4%",
-    "slot": "gloves",
-    "effects": [{ "stat": "critRate", "type": "add", "value": 0.04 }],
-    "dropRate": 0.14
+    "slot": "bracers",
+    "effects": [
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 0.04
+      }
+    ],
+    "dropRate": 0.14,
+    "baseAtk": 20
   },
   {
     "id": "item_sprint_boots",
     "name": "疾行靴",
     "rarity": "white",
     "description": "攻速+6%",
-    "slot": "boots",
-    "effects": [{ "stat": "attackSpeed", "type": "mul_pct", "value": -0.06 }],
-    "dropRate": 0.14
+    "slot": "shoes",
+    "effects": [
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -0.06
+      }
+    ],
+    "dropRate": 0.14,
+    "baseAtk": 20
   },
   {
     "id": "item_iron_shield",
     "name": "铁盾",
     "rarity": "white",
     "description": "射程+1",
-    "slot": "armor",
-    "effects": [{ "stat": "range", "type": "add", "value": 1 }],
-    "dropRate": 0.12
+    "slot": "coat",
+    "effects": [
+      {
+        "stat": "range",
+        "type": "add",
+        "value": 1
+      }
+    ],
+    "dropRate": 0.12,
+    "baseAtk": 20
   },
   {
     "id": "item_power_ring",
     "name": "力量戒指",
     "rarity": "white",
     "description": "伤害+8%",
-    "slot": "accessory",
-    "effects": [{ "stat": "damage", "type": "mul_pct", "value": 0.08 }],
-    "dropRate": 0.10
+    "slot": "pants",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 0.08
+      }
+    ],
+    "dropRate": 0.1,
+    "baseAtk": 20
   },
   {
     "id": "item_speed_boots",
     "name": "疾风靴",
     "rarity": "blue",
     "description": "攻速+12%",
-    "slot": "boots",
-    "effects": [{ "stat": "attackSpeed", "type": "mul_pct", "value": -0.12 }],
-    "dropRate": 0.08
+    "slot": "shoes",
+    "effects": [
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -0.12
+      }
+    ],
+    "dropRate": 0.08,
+    "baseAtk": 20
   },
   {
     "id": "item_striking_gloves",
     "name": "连击手套",
     "rarity": "blue",
     "description": "暴击+8%",
-    "slot": "gloves",
-    "effects": [{ "stat": "critRate", "type": "add", "value": 0.08 }],
-    "dropRate": 0.08
+    "slot": "bracers",
+    "effects": [
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 0.08
+      }
+    ],
+    "dropRate": 0.08,
+    "baseAtk": 20
   },
   {
     "id": "item_war_helm",
@@ -78,10 +134,19 @@
     "description": "金币+10%，经验+10%",
     "slot": "helmet",
     "effects": [
-      { "stat": "goldBonus", "type": "mul_pct", "value": 0.10 },
-      { "stat": "xpBonus", "type": "mul_pct", "value": 0.10 }
+      {
+        "stat": "goldBonus",
+        "type": "mul_pct",
+        "value": 0.1
+      },
+      {
+        "stat": "xpBonus",
+        "type": "mul_pct",
+        "value": 0.1
+      }
     ],
-    "dropRate": 0.08
+    "dropRate": 0.08,
+    "baseAtk": 20
   },
   {
     "id": "item_flame_blade",
@@ -89,8 +154,15 @@
     "rarity": "blue",
     "description": "伤害+15",
     "slot": "weapon",
-    "effects": [{ "stat": "damage", "type": "add", "value": 15 }],
-    "dropRate": 0.06
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "add",
+        "value": 15
+      }
+    ],
+    "dropRate": 0.06,
+    "baseAtk": 20
   },
   {
     "id": "item_sniper_scope",
@@ -99,52 +171,93 @@
     "description": "射程+2，暴击+10%",
     "slot": "weapon",
     "effects": [
-      { "stat": "range", "type": "add", "value": 2 },
-      { "stat": "critRate", "type": "add", "value": 0.10 }
+      {
+        "stat": "range",
+        "type": "add",
+        "value": 2
+      },
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 0.1
+      }
     ],
-    "dropRate": 0.05
+    "dropRate": 0.05,
+    "baseAtk": 20
   },
   {
     "id": "item_frost_crown",
     "name": "冰霜之冠",
     "rarity": "purple",
     "description": "减速效果+20%",
-    "slot": "accessory",
-    "effects": [{ "stat": "slowPct", "type": "add", "value": 0.20 }],
-    "dropRate": 0.04
+    "slot": "pants",
+    "effects": [
+      {
+        "stat": "slowPct",
+        "type": "add",
+        "value": 0.2
+      }
+    ],
+    "dropRate": 0.04,
+    "baseAtk": 20
   },
   {
     "id": "item_dragon_armor",
     "name": "龙鳞甲",
     "rarity": "purple",
     "description": "伤害+25%，攻速+15%",
-    "slot": "armor",
+    "slot": "coat",
     "effects": [
-      { "stat": "damage", "type": "mul_pct", "value": 0.25 },
-      { "stat": "attackSpeed", "type": "mul_pct", "value": -0.15 }
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 0.25
+      },
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -0.15
+      }
     ],
-    "dropRate": 0.03
+    "dropRate": 0.03,
+    "baseAtk": 20
   },
   {
     "id": "item_crit_amulet",
     "name": "暴击护符",
     "rarity": "purple",
     "description": "暴击率+20%，暴击伤害+80%",
-    "slot": "accessory",
+    "slot": "pants",
     "effects": [
-      { "stat": "critRate", "type": "add", "value": 0.20 },
-      { "stat": "critDamage", "type": "mul_pct", "value": 0.80 }
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 0.2
+      },
+      {
+        "stat": "critDamage",
+        "type": "mul_pct",
+        "value": 0.8
+      }
     ],
-    "dropRate": 0.03
+    "dropRate": 0.03,
+    "baseAtk": 20
   },
   {
     "id": "item_midas_gloves",
     "name": "点金手套",
     "rarity": "orange",
     "description": "击杀金币+100%",
-    "slot": "accessory",
-    "effects": [{ "stat": "goldBonus", "type": "mul_pct", "value": 1.00 }],
-    "dropRate": 0.02
+    "slot": "bracers",
+    "effects": [
+      {
+        "stat": "goldBonus",
+        "type": "mul_pct",
+        "value": 1
+      }
+    ],
+    "dropRate": 0.02,
+    "baseAtk": 20
   },
   {
     "id": "item_godslayer",
@@ -153,21 +266,444 @@
     "description": "伤害+50%，暴击+25%",
     "slot": "weapon",
     "effects": [
-      { "stat": "damage", "type": "mul_pct", "value": 0.50 },
-      { "stat": "critRate", "type": "add", "value": 0.25 }
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 0.5
+      },
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 0.25
+      }
     ],
-    "dropRate": 0.01
+    "dropRate": 0.01,
+    "baseAtk": 20
   },
   {
     "id": "item_time_hourglass",
     "name": "时光沙漏",
     "rarity": "orange",
     "description": "攻速+30%，射程+3",
-    "slot": "accessory",
+    "slot": "pants",
     "effects": [
-      { "stat": "attackSpeed", "type": "mul_pct", "value": -0.30 },
-      { "stat": "range", "type": "add", "value": 3 }
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -0.3
+      },
+      {
+        "stat": "range",
+        "type": "add",
+        "value": 3
+      }
     ],
-    "dropRate": 0.01
+    "dropRate": 0.01,
+    "baseAtk": 20
+  },
+  {
+    "id": "item_weapon_green",
+    "name": "猎手之刃",
+    "rarity": "green",
+    "description": "伤害+14%",
+    "slot": "weapon",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 0.14
+      }
+    ],
+    "dropRate": 0.09
+  },
+  {
+    "id": "item_weapon_purple",
+    "name": "雷霆战刃",
+    "rarity": "purple",
+    "description": "伤害+26%",
+    "slot": "weapon",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 0.26
+      }
+    ],
+    "dropRate": 0.05
+  },
+  {
+    "id": "item_weapon_red",
+    "name": "湮灭之刃",
+    "rarity": "red",
+    "description": "伤害+38%",
+    "slot": "weapon",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 0.38
+      }
+    ],
+    "dropRate": 0.015
+  },
+  {
+    "id": "item_weapon_rainbow",
+    "name": "创世之刃",
+    "rarity": "rainbow",
+    "description": "伤害+44%",
+    "slot": "weapon",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 0.44
+      }
+    ],
+    "dropRate": 0.008
+  },
+  {
+    "id": "item_helmet_green",
+    "name": "侦测帽",
+    "rarity": "green",
+    "description": "暴击率+3%",
+    "slot": "helmet",
+    "effects": [
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 3
+      }
+    ],
+    "dropRate": 0.09
+  },
+  {
+    "id": "item_helmet_purple",
+    "name": "圣盔",
+    "rarity": "purple",
+    "description": "暴击率+5%",
+    "slot": "helmet",
+    "effects": [
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 5
+      }
+    ],
+    "dropRate": 0.05
+  },
+  {
+    "id": "item_helmet_orange",
+    "name": "龙冠",
+    "rarity": "orange",
+    "description": "暴击率+6%",
+    "slot": "helmet",
+    "effects": [
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 6
+      }
+    ],
+    "dropRate": 0.03
+  },
+  {
+    "id": "item_helmet_red",
+    "name": "天启头盔",
+    "rarity": "red",
+    "description": "暴击率+7%",
+    "slot": "helmet",
+    "effects": [
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 7
+      }
+    ],
+    "dropRate": 0.015
+  },
+  {
+    "id": "item_helmet_rainbow",
+    "name": "全知之盔",
+    "rarity": "rainbow",
+    "description": "暴击率+8%",
+    "slot": "helmet",
+    "effects": [
+      {
+        "stat": "critRate",
+        "type": "add",
+        "value": 8
+      }
+    ],
+    "dropRate": 0.008
+  },
+  {
+    "id": "item_coat_green",
+    "name": "皮甲",
+    "rarity": "green",
+    "description": "伤害+600%",
+    "slot": "coat",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 6
+      }
+    ],
+    "dropRate": 0.09
+  },
+  {
+    "id": "item_coat_blue",
+    "name": "合金甲",
+    "rarity": "blue",
+    "description": "伤害+800%",
+    "slot": "coat",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 8
+      }
+    ],
+    "dropRate": 0.07
+  },
+  {
+    "id": "item_coat_orange",
+    "name": "泰坦铠",
+    "rarity": "orange",
+    "description": "伤害+1200%",
+    "slot": "coat",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 12
+      }
+    ],
+    "dropRate": 0.03
+  },
+  {
+    "id": "item_coat_red",
+    "name": "不朽战甲",
+    "rarity": "red",
+    "description": "伤害+1400%",
+    "slot": "coat",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 14
+      }
+    ],
+    "dropRate": 0.015
+  },
+  {
+    "id": "item_coat_rainbow",
+    "name": "星陨法衣",
+    "rarity": "rainbow",
+    "description": "伤害+1600%",
+    "slot": "coat",
+    "effects": [
+      {
+        "stat": "damage",
+        "type": "mul_pct",
+        "value": 16
+      }
+    ],
+    "dropRate": 0.008
+  },
+  {
+    "id": "item_bracers_green",
+    "name": "灵巧护腕",
+    "rarity": "green",
+    "description": "暴击伤害+800%",
+    "slot": "bracers",
+    "effects": [
+      {
+        "stat": "critDamage",
+        "type": "mul_pct",
+        "value": 8
+      }
+    ],
+    "dropRate": 0.09
+  },
+  {
+    "id": "item_bracers_purple",
+    "name": "猎杀护臂",
+    "rarity": "purple",
+    "description": "暴击伤害+1400%",
+    "slot": "bracers",
+    "effects": [
+      {
+        "stat": "critDamage",
+        "type": "mul_pct",
+        "value": 14
+      }
+    ],
+    "dropRate": 0.05
+  },
+  {
+    "id": "item_bracers_red",
+    "name": "弑神护臂",
+    "rarity": "red",
+    "description": "暴击伤害+2000%",
+    "slot": "bracers",
+    "effects": [
+      {
+        "stat": "critDamage",
+        "type": "mul_pct",
+        "value": 20
+      }
+    ],
+    "dropRate": 0.015
+  },
+  {
+    "id": "item_bracers_rainbow",
+    "name": "虚空护臂",
+    "rarity": "rainbow",
+    "description": "暴击伤害+2300%",
+    "slot": "bracers",
+    "effects": [
+      {
+        "stat": "critDamage",
+        "type": "mul_pct",
+        "value": 23
+      }
+    ],
+    "dropRate": 0.008
+  },
+  {
+    "id": "item_pants_green",
+    "name": "战术腰带",
+    "rarity": "green",
+    "description": "金币+900%",
+    "slot": "pants",
+    "effects": [
+      {
+        "stat": "goldBonus",
+        "type": "mul_pct",
+        "value": 9
+      }
+    ],
+    "dropRate": 0.09
+  },
+  {
+    "id": "item_pants_blue",
+    "name": "疾风护腿",
+    "rarity": "blue",
+    "description": "金币+1200%",
+    "slot": "pants",
+    "effects": [
+      {
+        "stat": "goldBonus",
+        "type": "mul_pct",
+        "value": 12
+      }
+    ],
+    "dropRate": 0.07
+  },
+  {
+    "id": "item_pants_red",
+    "name": "巨力束裤",
+    "rarity": "red",
+    "description": "金币+2100%",
+    "slot": "pants",
+    "effects": [
+      {
+        "stat": "goldBonus",
+        "type": "mul_pct",
+        "value": 21
+      }
+    ],
+    "dropRate": 0.015
+  },
+  {
+    "id": "item_pants_rainbow",
+    "name": "时空束裤",
+    "rarity": "rainbow",
+    "description": "金币+2400%",
+    "slot": "pants",
+    "effects": [
+      {
+        "stat": "goldBonus",
+        "type": "mul_pct",
+        "value": 24
+      }
+    ],
+    "dropRate": 0.008
+  },
+  {
+    "id": "item_shoes_green",
+    "name": "迅捷之靴",
+    "rarity": "green",
+    "description": "攻速+700%",
+    "slot": "shoes",
+    "effects": [
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -7
+      }
+    ],
+    "dropRate": 0.09
+  },
+  {
+    "id": "item_shoes_purple",
+    "name": "幻影之靴",
+    "rarity": "purple",
+    "description": "攻速+1300%",
+    "slot": "shoes",
+    "effects": [
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -13
+      }
+    ],
+    "dropRate": 0.05
+  },
+  {
+    "id": "item_shoes_orange",
+    "name": "风行者",
+    "rarity": "orange",
+    "description": "攻速+1600%",
+    "slot": "shoes",
+    "effects": [
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -16
+      }
+    ],
+    "dropRate": 0.03
+  },
+  {
+    "id": "item_shoes_red",
+    "name": "神行之靴",
+    "rarity": "red",
+    "description": "攻速+1900%",
+    "slot": "shoes",
+    "effects": [
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -19
+      }
+    ],
+    "dropRate": 0.015
+  },
+  {
+    "id": "item_shoes_rainbow",
+    "name": "瞬影之靴",
+    "rarity": "rainbow",
+    "description": "攻速+2200%",
+    "slot": "shoes",
+    "effects": [
+      {
+        "stat": "attackSpeed",
+        "type": "mul_pct",
+        "value": -22
+      }
+    ],
+    "dropRate": 0.008
   }
 ]

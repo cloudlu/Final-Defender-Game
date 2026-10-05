@@ -22,7 +22,7 @@ export class SkillBar {
       parts.push(skill.desc || '');
     } else {
       if (skill.damage) parts.push(`伤害 ${skill.damage}`);
-      if (skill.cooldown) parts.push(`冷却 ${skill.cooldown}s`);
+      if (skill.cooldown) parts.push(`冷却 ${Math.round(skill.cooldown * 100) / 100}s`); // 显示端取整防浮点尾数
       if (skill.aoe && skill.aoe < 90) parts.push(`范围 ${skill.aoe} 格`);
       if (skill.chain) parts.push(`链跳 ${skill.chain} 目标`);
       parts.push(skill.desc || '');
@@ -110,8 +110,13 @@ export class SkillBar {
           this.onQuickCast?.(skill.id);
         });
       } else {
-        // 被动需要一个透明 hover 载体（不响应点击）
-        bg.setInteractive(new this.scene.geom.Circle(16, 16, 16), () => false);
+        // 被动：可交互（保留 hover tooltip），点击吞掉不施放
+        bg.setInteractive({ useHandCursor: 'default' });
+        bg.on('pointerdown', (p) => {
+          p.event.stopPropagation();
+          // 被动不可施放——显示提示
+          this.onPassiveClick?.(skill.id);
+        });
       }
       bg.on('pointerover', () => this._showTooltip(skill, x, y));
       bg.on('pointerout', () => this._hideTooltip());
@@ -123,6 +128,8 @@ export class SkillBar {
 
   /** 快捷施放回调（GameScene 注入）：点图标立即释放 */
   onQuickCast = null;
+  /** 被动点击回调：提示"被动技能无需释放" */
+  onPassiveClick = null;
   /** 选中回调（数字键瞄准流） */
   onSelect = null;
 

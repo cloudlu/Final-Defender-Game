@@ -110,6 +110,45 @@ export class AudioSystem {
     this._tone({ freq: 2200, freqEnd: 400, type: 'sawtooth', duration: 0.25, volume: 0.3 });
   }
 
+  /** 旋风加农：风声呼啸（噪声扫频） */
+  cyclone() {
+    if (!this._throttle('cyclone', 150)) return;
+    this._noise({ duration: 0.4, volume: 0.35, filterFreq: 1200 });
+    this._tone({ freq: 300, freqEnd: 900, type: 'sine', duration: 0.35, volume: 0.15 });
+  }
+
+  /** 装甲车：引擎轰鸣+金属撞击 */
+  vehicle() {
+    if (!this._throttle('vehicle', 200)) return;
+    this._tone({ freq: 70, freqEnd: 45, type: 'square', duration: 0.5, volume: 0.4 });
+    this._noise({ duration: 0.35, volume: 0.3, filterFreq: 500 });
+  }
+
+  /** 制导激光：锁定音+高能发射 */
+  guided() {
+    this._tone({ freq: 600, freqEnd: 1500, type: 'sine', duration: 0.15, volume: 0.25 });
+    this._tone({ freq: 1800, freqEnd: 600, type: 'sawtooth', duration: 0.2, volume: 0.2, delay: 0.12 });
+  }
+
+  /** 空投轰炸：呼啸下落+巨响 */
+  airstrike() {
+    this._tone({ freq: 1200, freqEnd: 200, type: 'sine', duration: 0.5, volume: 0.25 });
+    this._noise({ duration: 0.4, volume: 0.5, filterFreq: 700, delay: 0.35 });
+    this._tone({ freq: 80, freqEnd: 30, type: 'sine', duration: 0.4, volume: 0.5, delay: 0.4 });
+  }
+
+  /** 跃迁电子：电弧跃迁音 */
+  leapwave() {
+    if (!this._throttle('leapwave', 100)) return;
+    this._tone({ freq: 400, freqEnd: 1800, type: 'square', duration: 0.18, volume: 0.25 });
+  }
+
+  /** 时空裂隙：空间扭曲低鸣 */
+  rift() {
+    this._tone({ freq: 150, freqEnd: 600, type: 'sine', duration: 0.6, volume: 0.3 });
+    this._tone({ freq: 150, freqEnd: 400, type: 'triangle', duration: 0.6, volume: 0.2, delay: 0.1 });
+  }
+
   coin() {
     if (!this._throttle('coin', 70)) return;
     this._tone({ freq: 1320, type: 'sine', duration: 0.06, volume: 0.2 });

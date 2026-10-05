@@ -15,10 +15,11 @@ const QUALITY_COLORS = {
  * 核心提示：拥有即永久加攻，无需上阵（原版核心机制）。
  */
 export class TavernPanel {
-  constructor(scene, mercSystem, globalSave, { onClose, onPersist }) {
+  constructor(scene, mercSystem, globalSave, { onClose, onPersist, forgeRef = null }) {
     this.scene = scene;
     this.mercs = mercSystem;
     this.save = globalSave;
+    this.forgeRef = forgeRef;
     this.onClose = onClose;
     this.onPersist = onPersist;
     this.selectedId = null;
@@ -57,7 +58,7 @@ export class TavernPanel {
     }).setOrigin(0.5));
     recruitBtn.on('pointerdown', () => {
       const balance = cur === '💎' ? (this.save.diamond || 0) : (this.save.gold || 0);
-      if (balance < cost) { this.scene.cameras.main.flash(150, 255, 60, 60); return; }
+      if (balance < cost) { this._toast('⚠ 操作无法完成：条件不足'); return; }
       if (cur === '💎') this.save.diamond -= cost; else this.save.gold -= cost;
       const r = this.mercs.recruit();
       const msg = r.isNew ? `🎉 获得新佣兵：${r.name}！` : `${r.name} 碎片 +${r.shards}`;
@@ -79,10 +80,10 @@ export class TavernPanel {
     this.refresh();
   }
 
-  _toast(msg) {
+  _toast(msg, color = '#ffdd44') {
     this._toastText?.destroy();
     this._toastText = this.scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, msg, {
-      fontSize: '16px', fill: '#ffdd44', fontFamily: 'Arial', fontStyle: 'bold',
+      fontSize: '16px', fill: color, fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
       backgroundColor: '#000000cc', padding: { x: 12, y: 6 },
     }).setOrigin(0.5).setDepth(750);
@@ -170,6 +171,47 @@ export class TavernPanel {
       });
     }
 
+    // ===== 枪械研发（B5：独立乘区，只作用于枪械）=====
+    const research = this.forgeRef; // GameScene/Menu 注入 forgeSystem
+    if (research) {
+      const rY = GAME_HEIGHT - 262;
+      const lv = research.save.gunResearch?.level || 0;
+      const mult = research.getResearchMultiplier();
+      const panel = this.scene.add.rectangle(cx, rY, 490, 40, 0x14202c);
+      panel.setStrokeStyle(1, 0x4466aa);
+      this.detailContainer.add(panel);
+      this.detailContainer.add(this.scene.add.text(cx - 200, rY, `🔬 枪械研发 Lv.${lv}（枪械伤害 ×${mult.toFixed(2)}）`, {
+        fontSize: '12px', fill: '#88ccff', fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0, 0.5));
+      const notesCost = research.getResearchCost();
+      const diamondCost = notesCost * 5; // 图纸→钻石简化
+      // 图纸优先（原版：枪械研发消耗图纸），无图纸用钻石兜底
+      const notes = this.save.gunNotes || 0;
+      const useNotes = notes >= notesCost;
+      const canUp = useNotes ? true : (this.save.diamond || 0) >= diamondCost;
+      const rBtn = this.scene.add.rectangle(cx + 190, rY, 120, 30, canUp ? 0x3366aa : 0x555566)
+        .setInteractive({ useHandCursor: canUp });
+      this.detailContainer.add(rBtn);
+      this.detailContainer.add(this.scene.add.text(cx + 190, rY, useNotes ? `研究 📜${notesCost}` : `研究 💎${diamondCost}`, {
+        fontSize: '12px', fill: '#fff', fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0.5));
+      rBtn.on('pointerdown', () => {
+        if (useNotes) {
+          const r = research.upgradeResearch(notesCost);
+          if (r.success) { this.save.gunNotes -= notesCost; this.onPersist?.(); this.refresh(); this._toast(`🔬 研发成功 Lv.${r.level}`, '#88ccff'); }
+        } else if ((this.save.diamond || 0) >= diamondCost) {
+          this.save.diamond -= diamondCost; // 钻石兜底（原版图纸通道的简化替代）
+          const r = research.upgradeResearch(notesCost);
+          if (r.success) { this.onPersist?.(); this.refresh(); this._toast(`🔬 研发成功 Lv.${r.level}`, '#88ccff'); }
+        } else {
+          this._toast(`⚠ 图纸不足（需 📜${notesCost}，持有 ${notes}）或钻石不足（需 💎${diamondCost}）`, '#ffaa66');
+        }
+      });
+      this.detailContainer.add(this.scene.add.text(cx - 205, rY + 0, `图纸 ${notes}`, {
+        fontSize: '10px', fill: '#889', fontFamily: 'Arial',
+      }).setOrigin(0, 0.5));
+    }
+
     if (!this.selectedId) return;
     const cfg = this.mercs._cfg(this.selectedId);
     const st = this.mercs.save.owned[this.selectedId];
@@ -195,7 +237,7 @@ export class TavernPanel {
     lvBtn.on('pointerdown', () => {
       const r = this.mercs.levelUp(this.selectedId, this.save.gold || 0);
       if (r.success) { this.save.gold -= r.cost; this.onPersist?.(); this.refresh(); }
-      else this.scene.cameras.main.flash(150, 255, 60, 60);
+      else this._toast('⚠ 操作无法完成：条件不足');
     });
 
     // 升品（契约碎片简化为钻石消耗）
@@ -209,7 +251,7 @@ export class TavernPanel {
       fontSize: '12px', fill: '#fff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5));
     qBtn.on('pointerdown', () => {
-      if (!canQ) { this.scene.cameras.main.flash(150, 255, 60, 60); return; }
+      if (!canQ) { this._toast('⚠ 操作无法完成：条件不足'); return; }
       this.save.diamond -= qDiamond;
       const r = this.mercs.upgradeQuality(this.selectedId);
       if (r.success) {

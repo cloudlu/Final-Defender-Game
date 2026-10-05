@@ -73,7 +73,7 @@ describe('WaveManager (level mode)', () => {
     const rng = new SeededRNG(42);
     const info = wm.startWave(rng);
     expect(info.wave).toBe(1);
-    expect(info.count).toBe(3); // 1 kind × 3
+    expect(info.count).toBe(8); // 1 kind × 8（原版尸潮密度）
     // all spawned are basic
     while (wm.update(10) !== null) {} // drain via large step: only 1 spawn fires per call
     expect(info.isFinalWave).toBe(false);
@@ -90,7 +90,7 @@ describe('WaveManager (level mode)', () => {
     }
     const final = wm.startWave(rng);
     expect(final.isFinalWave).toBe(true);
-    expect(final.count).toBe(4); // 1 kind × 4 (final wave boost)
+    expect(final.count).toBe(10); // 1 kind × 10（终波基数）
     wm.endWave();
     wm.notifyWaveEnded();
     expect(wm.isLevelComplete()).toBe(true);
@@ -107,6 +107,6 @@ describe('WaveManager (level mode)', () => {
     const wm = new WaveManager(balanceConfig, enemyConfigs, levelRuntime);
     const rng = new SeededRNG(42);
     const info2 = (() => { wm.startWave(rng); wm.endWave(); wm.notifyWaveEnded(); return wm.startWave(rng); })();
-    expect(info2.count).toBe(6); // 2 kinds × 3
+    expect(info2.count).toBe(16); // 2 kinds × 8
   });
 });

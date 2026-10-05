@@ -1,37 +1,43 @@
 [
   {
     "id": "enemy_basic",
-    "name": "普通丧尸",
+    "name": "普通僵尸",
     "hp": 100,
     "speed": 1,
     "armor": 0,
     "bounty": 10,
     "behavior": null,
-    "description": "缓慢逼近的普通僵尸"
+    "description": "基础单位"
   },
   {
     "id": "enemy_runner",
-    "name": "疾跑尸",
+    "name": "迅捷鬣狗",
     "hp": 60,
     "speed": 2.2,
     "armor": 0,
     "bounty": 6,
     "behavior": null,
-    "description": "快速冲刺，血量低"
+    "description": "受到额外 50% 寒冰伤害",
+    "weak": {
+      "ice": 0.5
+    }
   },
   {
     "id": "enemy_bucket",
-    "name": "铁桶尸",
+    "name": "护甲僵尸",
     "hp": 300,
     "speed": 0.8,
     "armor": 6,
     "bounty": 30,
     "behavior": null,
-    "description": "铁桶护体，高护甲，桶被打掉后降级"
+    "description": "高护甲；护甲被打掉后降级；弱能量",
+    "weak": {
+      "energy": 0.5
+    }
   },
   {
     "id": "enemy_bomber",
-    "name": "自爆尸",
+    "name": "自爆僵尸",
     "hp": 120,
     "speed": 1.4,
     "armor": 0,
@@ -45,7 +51,7 @@
   },
   {
     "id": "enemy_flyer",
-    "name": "飞行尸",
+    "name": "飞行员僵尸",
     "hp": 100,
     "speed": 1.5,
     "armor": 0,
@@ -53,11 +59,14 @@
     "behavior": {
       "type": "fly"
     },
-    "description": "低空飞行，免疫冻结"
+    "description": "空中单位；免疫眩晕/冰冻；50% 躲避弹道；弱能量 50%",
+    "weak": {
+      "energy": 0.5
+    }
   },
   {
     "id": "enemy_polevault",
-    "name": "撑杆尸",
+    "name": "撑杆僵尸",
     "hp": 180,
     "speed": 1,
     "armor": 2,
@@ -65,17 +74,20 @@
     "behavior": {
       "type": "dash"
     },
-    "description": "周期性冲刺，快速逼近"
+    "description": "周期性冲刺逼近"
   },
   {
     "id": "enemy_tank",
-    "name": "胖尸王",
+    "name": "沉重僵尸",
     "hp": 900,
     "speed": 0.5,
     "armor": 4,
     "bounty": 60,
     "behavior": null,
-    "description": "巨型肉盾，撞击重创城墙"
+    "description": "移动缓慢，血量防御高，弱火",
+    "weak": {
+      "fire": 0.5
+    }
   },
   {
     "id": "enemy_nurse",
@@ -96,7 +108,8 @@
     "weak": {
       "wind": 0.5
     },
-    "description": "持续恢复周围怪物生命，免疫麻痹，弱风系"
+    "description": "持续回血光环；抗电抗冰 50%；弱风",
+    "deathHealAura": 0.3
   },
   {
     "id": "enemy_giant",
@@ -110,7 +123,7 @@
       "threshold": 0.5
     },
     "resistKnock": 0.9,
-    "description": "难以击退；血量过半狂暴，免疫控制"
+    "description": "难以击退；血量过半狂暴免疫控制"
   },
   {
     "id": "enemy_boar",
@@ -124,7 +137,10 @@
       "threshold": 0.3
     },
     "immuneKnock": true,
-    "description": "免疫击退；血量低于 30% 狂暴"
+    "description": "免疫击退；血量<30% 狂暴；弱物理",
+    "weak": {
+      "physical": 0.5
+    }
   },
   {
     "id": "enemy_antenna",
@@ -135,7 +151,7 @@
     "bounty": 28,
     "behavior": null,
     "dodge": 0.5,
-    "description": "远程攻击；自带 50% 弹道闪避"
+    "description": "远程攻击；50% 弹道闪避"
   },
   {
     "id": "enemy_driller",
@@ -149,20 +165,21 @@
       "onHitSpeedBoost": 0.8
     },
     "resistFreeze": true,
-    "description": "被攻击后加速钻行，免疫冰冻"
+    "description": "受击加速钻行；免疫冰冻"
   },
   {
     "id": "enemy_flame",
-    "name": "火焰僵尸",
+    "name": "双头僵尸",
     "hp": 160,
     "speed": 1,
     "armor": 0,
     "bounty": 22,
     "behavior": null,
     "weak": {
-      "ice": 1
+      "fire": 0.5,
+      "electric": 0.5
     },
-    "description": "受到额外 100% 寒冰伤害"
+    "description": "受到额外 50% 火焰和闪电伤害"
   },
   {
     "id": "enemy_frostbeast",
@@ -179,15 +196,200 @@
   },
   {
     "id": "enemy_heavy",
-    "name": "沉重僵尸",
+    "name": "篮球僵尸",
     "hp": 600,
     "speed": 0.45,
     "armor": 5,
     "bounty": 55,
     "behavior": null,
     "weak": {
+      "fire": 0.5,
+      "electric": 0.5
+    },
+    "description": "远程攻击；受到额外 50% 火焰和闪电伤害"
+  },
+  {
+    "id": "enemy_fish",
+    "name": "咸鱼僵尸",
+    "hp": 180,
+    "speed": 0.9,
+    "armor": 1,
+    "bounty": 30,
+    "behavior": null,
+    "deathHealAura": 0.15,
+    "resist": {
+      "fire": 0.5,
+      "ice": 0.5,
+      "electric": 0.5,
+      "wind": 0.5
+    },
+    "weak": {
+      "physical": 0.5
+    },
+    "negativeResist": true,
+    "description": "免疫负面；减 50% 元素伤；死亡给周围 18 次坚固护甲；弱物理"
+  },
+  {
+    "id": "enemy_mummy",
+    "name": "木乃伊僵尸",
+    "hp": 150,
+    "speed": 0.85,
+    "armor": 0,
+    "bounty": 28,
+    "behavior": {
+      "type": "revive3"
+    },
+    "weak": {
       "fire": 0.5
     },
-    "description": "移动缓慢，血量防御高，弱火"
+    "negativeResist": true,
+    "description": "死亡复活 3 次（血量递减）；弱火"
+  },
+  {
+    "id": "enemy_tomb",
+    "name": "墓碑僵尸",
+    "hp": 240,
+    "speed": 0.6,
+    "armor": 3,
+    "bounty": 26,
+    "behavior": null,
+    "immuneKnock": true,
+    "blocksProjectiles": true,
+    "description": "阻挡弹道；死后留墓碑继续阻挡；不免疫燃烧"
+  },
+  {
+    "id": "enemy_clown",
+    "name": "小丑僵尸",
+    "hp": 160,
+    "speed": 1.2,
+    "armor": 0,
+    "bounty": 30,
+    "behavior": null,
+    "dodge": 0.4,
+    "description": "弹跳闪避弹道和地面技；眩晕后变愤怒免疫冻结"
+  },
+  {
+    "id": "enemy_timid",
+    "name": "胆小僵尸",
+    "hp": 90,
+    "speed": 2.8,
+    "armor": 0,
+    "bounty": 18,
+    "behavior": null,
+    "negativeTimeResist": 1,
+    "description": "高移速躲队友身后；负面时间 -100%"
+  },
+  {
+    "id": "enemy_puppet",
+    "name": "傀儡僵尸",
+    "hp": 200,
+    "speed": 0.8,
+    "armor": 2,
+    "bounty": 24,
+    "behavior": null,
+    "stunImmune": true,
+    "description": "免疫麻痹和眩晕"
+  },
+  {
+    "id": "enemy_tennis",
+    "name": "网球僵尸",
+    "hp": 140,
+    "speed": 1,
+    "armor": 0,
+    "bounty": 22,
+    "behavior": null,
+    "weak": {
+      "electric": 0.5
+    },
+    "description": "远程攻击；弱电 50%"
+  },
+  {
+    "id": "enemy_bomb",
+    "name": "炸弹僵尸",
+    "hp": 130,
+    "speed": 1.1,
+    "armor": 0,
+    "bounty": 20,
+    "behavior": null,
+    "weak": {
+      "fire": 0.5
+    },
+    "description": "无特殊免疫；弱火 50%"
+  },
+  {
+    "id": "enemy_flame2",
+    "name": "火焰僵尸",
+    "hp": 170,
+    "speed": 1,
+    "armor": 0,
+    "bounty": 26,
+    "behavior": null,
+    "resist": {
+      "fire": 0.6
+    },
+    "resistFreeze": true,
+    "burnImmune": true,
+    "weak": {
+      "ice": 1
+    },
+    "description": "减 60% 火伤；免疫燃烧冻结；弱冰 100%"
+  },
+  {
+    "id": "enemy_lizard",
+    "name": "闪电蜥蜴",
+    "hp": 300,
+    "speed": 1.1,
+    "armor": 2,
+    "bounty": 45,
+    "behavior": null,
+    "immuneKnock": true,
+    "resist": {
+      "electric": 0.5
+    },
+    "weak": {
+      "ice": 0.5
+    },
+    "description": "精英：多段攻击；免击退；抗电弱冰"
+  },
+  {
+    "id": "enemy_bandage",
+    "name": "绷带僵尸",
+    "hp": 400,
+    "speed": 0.8,
+    "armor": 1,
+    "bounty": 48,
+    "behavior": {
+      "type": "bandage_heal",
+      "threshold": 0.3
+    },
+    "description": "精英：血<30% 停走 5 秒回 50% 血并召唤"
+  },
+  {
+    "id": "enemy_shark",
+    "name": "丧尸巨齿鲨",
+    "hp": 800,
+    "speed": 0.9,
+    "armor": 4,
+    "bounty": 80,
+    "behavior": null,
+    "immuneKnock": true,
+    "burnImmune": true,
+    "resist": {
+      "ice": 0.75,
+      "fire": 0.75
+    },
+    "description": "精英：出场扣 50% 血但减伤 50%；免击退燃烧冻伤；血每少 10% 控制时间-10%"
+  },
+  {
+    "id": "enemy_vampire",
+    "name": "嗜血僵尸",
+    "hp": 350,
+    "speed": 1,
+    "armor": 1,
+    "bounty": 50,
+    "behavior": {
+      "type": "vampire"
+    },
+    "description": "精英：具备回血能力——需重伤或高爆发"
   }
 ]

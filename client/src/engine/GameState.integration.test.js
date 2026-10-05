@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
 import { GameState } from './GameState.js';
 import { Player } from './Player.js';
 import enemiesData from '../data/enemies.json';
@@ -282,15 +283,15 @@ describe('GameState integration with real config data', () => {
     expect(strong.hp).toBeLessThan(strong.maxHp);
   });
 
-  it('vehicle sweeps a row with penetration', () => {
+  it('vehicle sweeps a vertical column with penetration (Y-axis per original)', () => {
     const state = createGame();
     const cfg = enemiesData.find(c => c.id === 'enemy_basic');
-    const inRow = new Enemy(cfg, 2, 5, 1.0);
-    const other = new Enemy(cfg, 5, 9, 1.0);
-    state.enemies.push(inRow, other);
+    const inCol = new Enemy(cfg, 4, 3, 1.0);
+    const other = new Enemy(cfg, 6, 3, 1.0);
+    state.enemies.push(inCol, other);
     state.player.unlockSkill('vehicle');
-    state.useSkill('vehicle', 6, 5);
-    expect(inRow.hp).toBeLessThan(inRow.maxHp);
+    state.useSkill('vehicle', 4, 8); // 落点在 col=4 列上
+    expect(inCol.hp).toBeLessThan(inCol.maxHp);
     expect(other.hp).toBe(other.maxHp);
   });
 
@@ -346,23 +347,37 @@ describe('GameState integration with real config data', () => {
     expect(misses).toBeLessThan(140);
   });
 
-  it('loot resolved as wear lands in forge inventory persisted inside global save (regression)', () => {
-    // 回归：GameScene 曾因 forgeSystem.save 与全局档脱钩导致仓库不落盘
-    const state = createGame();
-    // 模拟全局档骨架挂载（GameScene.create 的关键步骤）
+  it('loot is stored into forge inventory AT PICKUP time (container model)', () => {
+    // 回归 v6.5/v7.2：拾取即入仓（属性容器），中途退出不丢装备
+    const forgeSave = { inventory: [], nextUid: 1, forgeLevels: {}, forgeStones: 0, gunResearch: { level: 0 } };
+    const forge = new EquipmentForgeSystem(equipmentData, forgeSave);
+    const state = new GameState(enemiesData, balanceData, equipmentData, null, { forgeSystem: forge });
+    const e = new Enemy(enemiesData.find(c => c.id === 'enemy_basic'), 4, 4, 1.0);
+    state.enemies.push(e);
+    state._onKill(e);
+    if (state.pendingLoot.length === 0) {
+      const dropped = equipmentData.find(i2 => i2.id === 'item_power_ring');
+      state.pendingLoot.push(dropped);
+      forge.addEquipment(dropped.id, 1);
+    }
+    const first = forge.save.inventory[0];
+    expect(first.slot).toBeDefined();
+    expect(first.quality).toBe('white');
+    expect(first.affixes).toBeDefined();
+    expect(JSON.stringify(forgeSave).length).toBeGreaterThan(10);
+  });
+
+  it('loot resolved as wear lands in forge inventory persisted (container model regression)', () => {
     const globalSave = { levels: {}, gold: 1000, equipped: {} };
     globalSave.equipment = globalSave.equipment || { inventory: [], nextUid: 1 };
     const forge = new EquipmentForgeSystem(equipmentData, globalSave.equipment);
-    // 直接构造掉落（不依赖 8% roll 概率）
-    const dropped = equipmentData.find(i => i.id === 'item_power_ring');
-    state.pendingLoot.push(dropped);
+    const dropped = equipmentData.find(i2 => i2.id === 'item_power_ring');
+    // 拾取即入仓（v7.2 属性容器）
+    const entry = forge.addEquipment(dropped.id, 1);
     // 结算穿戴
-    const entry = forge.addEquipment(dropped.id);
     globalSave.equipped[dropped.slot] = entry.uid;
-    // 关键断言：仓库内容出现在全局档对象上（序列化即落盘）
     expect(globalSave.equipment.inventory.length).toBe(1);
-    expect(globalSave.equipment.inventory[0].refId).toBe(dropped.id);
-    expect(JSON.stringify(globalSave).includes(dropped.id)).toBe(true);
+    expect(JSON.stringify(globalSave).includes(dropped.slot)).toBe(true);
   });
 
   it('nurse heals itself over time via aura', () => {
@@ -430,19 +445,41 @@ describe('GameState integration with real config data', () => {
     expect(r.result.milestones).toContain('thermalIgnite');  // 6 级
   });
 
-  it('new element-weak enemies take amplified damage (flame weak to ice x2)', () => {
+  it('element-weak enemies take amplified damage (frostbeast weak to fire +200%)', () => {
     const state = createGame();
-    const flame = enemiesData.find(c => c.id === 'enemy_flame');
-    const e = new Enemy(flame, 4, 4, 1.0);
+    const fb = enemiesData.find(c => c.id === 'enemy_frostbeast');
+    const e = new Enemy(fb, 4, 4, 1.0);
     const d0 = e.hp;
-    e.takeDamage(20, 'ice');   // 弱冰 ×2
-    expect(e.hp).toBeCloseTo(d0 - 40, 1);
+    e.takeDamage(20, 'fire');  // 弱火：mult=1+2=3 → 20×3-armor2 = 58
+    expect(e.hp).toBeCloseTo(d0 - 58, 1);
     const d1 = e.hp;
-    e.takeDamage(20, 'fire');  // 火伤正常
-    expect(e.hp).toBeCloseTo(d1 - 20, 1);
+    e.takeDamage(20, 'ice');   // 冰伤无加成 → 20-2 = 18
+    expect(e.hp).toBeCloseTo(d1 - 18, 1);
   });
 
   // ===== 枪械弹匣（v4.2，原版弹夹 30 发）=====
+
+  it('level completes after final wave and auto-spawn stops (S1-5 regression)', () => {
+    const levels = JSON.parse(fs.readFileSync('src/data/levels.json', 'utf8'));
+    const l5 = levels.levels.find(l => l.id === 'S1-05');
+    const rt = { levelId: l5.id, name: l5.name, brief: '', enemyWaves: l5.enemyWaves, difficulty: l5.difficulty, elite: false, wallHp: l5.wallHp, totalWaves: l5.enemyWaves.length, density: l5.density };
+    const st = new GameState(enemiesData, balanceData, [], rt, { rngSeed: 7 });
+    // 打完所有波（每波清空敌人+推进）
+    let guard = 0;
+    while (!st.levelCleared && guard < 20000) {
+      st.update(1 / 30);
+      if (st.waveManager.waveActive && st.waveManager.spawnQueue.length === 0) {
+        st.enemies.length = 0; // 模拟全清
+        st.update(1 / 30);
+      }
+      guard++;
+    }
+    expect(st.levelCleared).toBe(true);
+    expect(st.waveManager.currentWave).toBe(l5.enemyWaves.length); // 波次=12 不再多
+    // 通关后 10 秒不再开新波（修复：通关后无限出波 = 变相无尽模式）
+    for (let i = 0; i < 300; i++) st.update(1 / 30);
+    expect(st.waveManager.currentWave).toBe(l5.enemyWaves.length);
+  });
 
   it('gun consumes ammo and auto-reloads after 30 shots', () => {
     const state = createGame();

@@ -1,0 +1,56 @@
+{
+  "qualities": ["白", "绿", "蓝", "紫", "黄", "红", "至尊"],
+  "socketsPerEquipment": 2,
+  "generalAffixes": [
+    { "id": "atk", "name": "攻击力", "stat": "baseAttack", "type": "add", "values": [10, 20, 30, 40, 50, 60, 70], "desc": "攻击力 +{v}" },
+    { "id": "crit", "name": "暴击率", "stat": "critRate", "type": "add", "values": [1, 2, 3, 4, 5, 6, 7], "pct": true, "desc": "暴击率 +{v}%" },
+    { "id": "gundmg", "name": "枪械伤害", "stat": "gunDamage", "type": "special", "values": [5, 10, 15, 20, 25, 30, 35], "pct": true, "desc": "枪械伤害 +{v}%" },
+    { "id": "alldmg", "name": "输出的伤害", "stat": "damage", "type": "mul_pct", "values": [2, 4, 6, 8, 10, 12, 14], "pct": true, "desc": "所有伤害 +{v}%" },
+    { "id": "fire_dmg", "name": "火系伤害", "stat": "element_fire", "type": "special", "values": [4, 8, 12, 16, 20, 24, 28], "pct": true, "desc": "火系伤害 +{v}%" },
+    { "id": "ice_dmg", "name": "冰系伤害", "stat": "element_ice", "type": "special", "values": [4, 8, 12, 16, 20, 24, 28], "pct": true, "desc": "冰系伤害 +{v}%" },
+    { "id": "electric_dmg", "name": "电系伤害", "stat": "element_electric", "type": "special", "values": [4, 8, 12, 16, 20, 24, 28], "pct": true, "desc": "电系伤害 +{v}%" },
+    { "id": "wind_dmg", "name": "风系伤害", "stat": "element_wind", "type": "special", "values": [4, 8, 12, 16, 20, 24, 28], "pct": true, "desc": "风系伤害 +{v}%" },
+    { "id": "physical_dmg", "name": "物理系伤害", "stat": "element_physical", "type": "special", "values": [4, 8, 12, 16, 20, 24, 28], "pct": true, "desc": "物理系伤害 +{v}%（装甲车/空投/无人机）" },
+    { "id": "energy_dmg", "name": "能量系伤害", "stat": "element_energy", "type": "special", "values": [4, 8, 12, 16, 20, 24, 28], "pct": true, "desc": "能量系伤害 +{v}%" },
+    { "id": "thermobaric_dmg", "name": "温压弹伤害", "stat": "skill_thermobaric", "type": "special", "values": [6, 12, 18, 24, 30, 36, 42], "pct": true, "desc": "温压弹伤害 +{v}%" },
+    { "id": "dryice_dmg", "name": "干冰弹伤害", "stat": "skill_dryice", "type": "special", "values": [5, 10, 15, 20, 25, 30, 35], "pct": true, "desc": "干冰弹伤害 +{v}%" },
+    { "id": "empierce_dmg", "name": "电磁穿刺伤害", "stat": "skill_empierce", "type": "special", "values": [5, 10, 15, 20, 25, 30, 35], "pct": true, "desc": "电磁穿刺伤害 +{v}%" },
+    { "id": "boom_dmg", "name": "所有爆炸伤害", "stat": "explodeDamage", "type": "special", "values": [3, 6, 9, 12, 15, 18, 21], "pct": true, "desc": "爆炸类伤害 +{v}%" },
+    { "id": "debuff_dmg", "name": "对负面状态怪物伤害", "stat": "debuffTargetDamage", "type": "special", "values": [6, 12, 18, 24, 30, 36, 42], "pct": true, "desc": "对负面状态怪物伤害 +{v}%" },
+    { "id": "highhp_dmg", "name": "对高血怪物伤害", "stat": "highHpTargetDamage", "type": "special", "values": [10, 20, 30, 40, 50, 60, 70], "pct": true, "desc": "对血量>70% 怪物伤害 +{v}%" },
+    { "id": "lowhp_dmg", "name": "残墙爆发", "stat": "lowHpWallDamage", "type": "special", "values": [50, 60, 70, 80, 90, 100, 110], "pct": true, "desc": "防线血量<30% 时伤害 +{v}%" },
+    { "id": "elite_dmg", "name": "对精英/首领增伤", "stat": "eliteDamage", "type": "special", "values": [20, 40, 60, 80, 100, 120, 140], "pct": true, "desc": "对精英/首领伤害 +{v}%" },
+    { "id": "debuff_ext", "name": "负面状态延长", "stat": "debuffExtend", "type": "special", "values": [0, 0, 10, 20, 30, 40, 50], "pct": true, "minQuality": 2, "desc": "负面状态持续时间 +{v}%（蓝色起步）" },
+    { "id": "wallhp", "name": "防线血量", "stat": "wallHp", "type": "add", "values": [200, 400, 600, 800, 1000, 1200, 1400], "desc": "城墙血量 +{v}（并减伤 {v/100}%）" }
+  ],
+  "slotAffixes": {
+    "helmet": [
+      { "id": "helm_extra_pick", "name": "头选", "stat": "extraPick", "type": "special", "values": [0, 0, 0, 0, 0, 0, 1], "minQuality": 6, "desc": "进入关卡立即多选 1 次技能（至尊专属）" },
+      { "id": "helm_cd", "name": "技能冷却", "stat": "cdReduce", "type": "special", "values": [2, 3, 4, 5, 6, 7, 7], "pct": true, "desc": "技能冷却 -{v}%" },
+      { "id": "helm_gunpierce", "name": "枪械穿透+1", "stat": "gunPierce", "type": "special", "values": [1, 1, 1, 1, 1, 1, 1], "desc": "枪械穿透 +1，伤害 +20%" },
+      { "id": "helm_airstrike_shock", "name": "空轰炸感电", "stat": "airstrikeShock", "type": "special", "values": [0, 0, 0, 0, 0, 8, 8], "pct": true, "minQuality": 5, "desc": "空投轰炸命中感电目标造成 {v}% 生命上限伤害（红起步）" }
+    ],
+    "coat": [
+      { "id": "coat_salon", "name": "枪械齐射+1", "stat": "gunVolley", "type": "special", "values": [0, 0, 1, 1, 1, 1, 1], "minQuality": 2, "desc": "枪械齐射 +1，伤害 +10%" },
+      { "id": "coat_empburn", "name": "电磁穿刺燃烧", "stat": "empBurn", "type": "special", "values": [0, 0, 0, 0, 0, 0, 1], "minQuality": 6, "desc": "电磁穿刺使敌人燃烧 5 秒（至尊专属）" },
+      { "id": "coat_icerank", "name": "冰系冻伤", "stat": "iceRank", "type": "special", "values": [0, 0, 0, 0, 0, 0, 1], "minQuality": 6, "desc": "冰系技能附 6 层冻伤（至尊专属）" },
+      { "id": "coat_icestorm_cd", "name": "冰暴减冷却", "stat": "icestormCd", "type": "special", "values": [0, 0, 0, 0, 0, 80, 80], "pct": true, "minQuality": 5, "desc": "冰暴首次命中减 80% 冷却（红起步）" }
+    ],
+    "bracers": [
+      { "id": "bracer_elite", "name": "对精英/首领增伤", "stat": "eliteDamage", "type": "special", "values": [20, 40, 60, 80, 100, 120, 140], "pct": true, "desc": "对精英/首领伤害 +{v}%" },
+      { "id": "bracer_block", "name": "防线格挡", "stat": "wallBlock", "type": "special", "values": [1, 2, 3, 4, 5, 6, 7], "desc": "格挡 {v} 次伤害并反击" },
+      { "id": "bracer_therm_bounce", "name": "温压弹射", "stat": "thermBounce", "type": "special", "values": [0, 0, 0, 0, 0, 0, 1], "minQuality": 6, "desc": "温压弹命中后弹射强化温压弹（至尊专属·质变）" }
+    ],
+    "pants": [
+      { "id": "pants_instantkill", "name": "秒杀", "stat": "instantKill", "type": "special", "values": [0, 0, 0, 3, 3, 3, 3], "pct": true, "minQuality": 3, "desc": "3% 概率秒杀小怪（精英/首领无效）" },
+      { "id": "pants_pierce3", "name": "穿透+3", "stat": "allPierce", "type": "special", "values": [0, 0, 0, 3, 3, 3, 3], "minQuality": 3, "desc": "所有穿透技能穿透 +3（质变）" },
+      { "id": "pants_cyclone_burn", "name": "旋风燃爆", "stat": "cycloneBurn", "type": "special", "values": [0, 0, 0, 0, 0, 0, 1], "minQuality": 6, "desc": "旋风加农命中燃烧目标 3 秒 4% 生命伤害（至尊）" }
+    ],
+    "shoes": [
+      { "id": "shoes_teleport", "name": "传送", "stat": "teleport", "type": "special", "values": [0, 0, 0, 0, 2, 4, 4], "pct": true, "minQuality": 4, "desc": "{v}% 概率将怪物传送回起点" },
+      { "id": "shoes_cd", "name": "技能冷却", "stat": "cdReduce", "type": "special", "values": [2, 3, 4, 5, 6, 7, 7], "pct": true, "desc": "技能冷却 -{v}%" },
+      { "id": "shoes_therm_burnzone", "name": "温压燃区", "stat": "thermBurnZone", "type": "special", "values": [0, 0, 0, 0, 0, 5, 5], "minQuality": 5, "desc": "温压弹爆炸产生 5 秒燃烧区域（红起步）" }
+    ]
+  },
+  "setMaxBonus": { "count": 6, "pct": 12 }
+}

@@ -16,8 +16,10 @@ import { audio } from '../ui/AudioSystem.js';
 import { GlobalUpgradeSystem } from '../engine/GlobalUpgradeSystem.js';
 import { EquipmentForgeSystem } from '../engine/EquipmentForgeSystem.js';
 import { MercenarySystem } from '../engine/MercenarySystem.js';
+import { GemSystem } from '../engine/GemSystem.js';
 import { VipSystem } from '../engine/VipSystem.js';
 import { ReviveSystem } from '../engine/ReviveSystem.js';
+import { SyncedSaveRepository } from '../repository/SyncedSaveRepository.js';
 
 const LEVEL_SAVE_KEY = 'lastline_levelsave';
 const GLOBAL_SAVE_KEY = 'lastline_globalsave';
@@ -37,7 +39,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     const cfg = loadGameConfigs();
     // 从 MenuScene 接收选关（缺省 L1-1）
-    const levelId = this.registry.get('selectedLevel') || 'L1-1';
+    const levelId = this.registry.get('selectedLevel') || 'S1-01';
     const elite = this.registry.get('eliteMode') || false;
     this.levelManager = new LevelManager(cfg.levelsConfig, this._loadLevelSave());
     this.levelRuntime = this.levelManager.startLevel(levelId, { elite });
@@ -53,6 +55,9 @@ export class GameScene extends Phaser.Scene {
     // 佣兵系统（v4.4 起替代宠物系统）
     this.globalUpgradeSystem.save.mercs = this.globalUpgradeSystem.save.mercs || { owned: {}, deployed: [null, null] };
     this.mercenarySystem = new MercenarySystem(cfg.mercenaries, this.globalUpgradeSystem.save.mercs);
+    // 宝石系统（v4.9）
+    this.globalUpgradeSystem.save.gems = this.globalUpgradeSystem.save.gems || { collection: {}, sockets: {}, nextUid: 1 };
+    this.gemSystem = new GemSystem(undefined, this.globalUpgradeSystem.save.gems);
     this.state = new GameState(cfg.enemies, cfg.balance, cfg.equipment, this.levelRuntime, {
       globalUpgrades: this.globalUpgradeSystem,
       forgeSystem: this.forgeSystem,
@@ -60,7 +65,13 @@ export class GameScene extends Phaser.Scene {
       bossConfig: cfg.bosses,
       vipSystem: this.vipSystem,
       mercenarySystem: this.mercenarySystem,
+      gemSystem: this.gemSystem,
     });
+    // 远端存档双写（权威源=远端；战斗内结算/BOSS 奖励等即时推送）
+    this._remoteSave = (global) => {
+      this._saveRepo = this._saveRepo || new SyncedSaveRepository();
+      this._saveRepo.save(1, { global, version: 2 });
+    };
     this.bossHpBar = new BossHpBar(this);
 
     this.effects = new EffectsLayer(this);
@@ -72,6 +83,10 @@ export class GameScene extends Phaser.Scene {
     // 点图标 = 立即施放（自动选最佳落点）；数字键 = 选中+瞄准模式
     this.skillBar.onQuickCast = (id) => this.quickCast(id);
     this.skillBar.onSelect = (id) => this.selectSkill(id);
+    this.skillBar.onPassiveClick = (id) => {
+      const sk = this.state.player.skills.find(s => s.id === id);
+      if (sk) this._showSelectHint(id, id); // 显示"被动·常驻生效"提示
+    };
 
     // 注：战斗中拾取装备不再弹窗（原版式）——进 pendingLoot 暂存栏，结算页统一处理
 
@@ -105,10 +120,13 @@ export class GameScene extends Phaser.Scene {
     this._showBriefing(this.levelRuntime);
     this._createMercSprites();
     this.bindInput();
+    // 原版开局节奏：进关立即首次三选一（抢节奏）
+    this.time.delayedCall(2600, () => { this.state.pendingLevelUp = true; });
   }
 
   /** 出战佣兵的局内形象（英雄两侧漂浮，最多 2 位） */
   _createMercSprites() {
+    this._mercSprites = [];
     const mercs = this.mercenarySystem.getDeployed();
     mercs.forEach((merc, i) => {
       const basePos = gridToPixel(this.state.player.x, this.state.player.y);
@@ -116,6 +134,7 @@ export class GameScene extends Phaser.Scene {
       const sprite = this.add.text(x, basePos.y - 6, merc.cfg.icon, {
         fontSize: '18px',
       }).setOrigin(0.5).setDepth(84);
+      this._mercSprites[i] = sprite;
       this.tweens.add({
         targets: sprite, y: basePos.y - 14, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       });
@@ -144,7 +163,10 @@ export class GameScene extends Phaser.Scene {
 
   _persistGlobalSave() {
     try {
+      // 权威源=远端；localStorage 仅作离线兜底缓存（双写，远端失败不阻塞）
+      this._remoteSave?.(this.globalUpgradeSystem.save);
       localStorage.setItem(GLOBAL_SAVE_KEY, JSON.stringify(this.globalUpgradeSystem.save));
+      localStorage.setItem('lastline_globalsave_ts', new Date().toISOString());
     } catch { /* storage unavailable */ }
   }
 
@@ -195,6 +217,7 @@ export class GameScene extends Phaser.Scene {
       goldEarned: Math.round(this.state.gold * rewardMult),
       diamondEarned: diamondReward,
       loot: [...this.state.pendingLoot], // 结算页统一处理本局装备
+      storyUnlock: this.levelRuntime.storyUnlock, // 通关解锁剧情（原版机制）
       hasNext,
     }, {
       onRetry: () => this.scene.restart(),
@@ -203,18 +226,28 @@ export class GameScene extends Phaser.Scene {
         this.scene.restart();
       },
       onMenu: () => this.scene.start('MenuScene'),
-      /** 结算装备处理：穿（入全局仓库+穿戴）/ 分解（折金币） */
+      /** 结算装备处理：装备已在拾取时入仓——此处只做快捷穿戴/分解 */
       onLootResolve: (item, wear) => {
         this.state.resolveLoot(item, { wear });
-        if (wear) {
-          const entry = this.forgeSystem.addEquipment(item.id);
-          if (entry) {
-            this.globalUpgradeSystem.save.equipped = this.globalUpgradeSystem.save.equipped || {};
-            this.globalUpgradeSystem.save.equipped[item.slot] = entry.uid;
-          }
-        } else {
-          const value = this.forgeSystem.getScrapValueForNew(item.id);
-          this.globalUpgradeSystem.save.gold = (this.globalUpgradeSystem.save.gold || 0) + value;
+        // 找到这件装备的仓库实体（拾取时按 id 入仓，可能多件——取最后一颗=最新）
+        const owned = this.forgeSystem.save.inventory.filter(i => i.refId === item.id);
+        const entry = owned[owned.length - 1];
+        if (wear && entry) {
+    this.globalUpgradeSystem.save.equipped = this.globalUpgradeSystem.save.equipped || {};
+    // 穿戴表消毒：值必须单 uid（历史版本可能写入数组）；key 必须是合法六部位
+    {
+      const VALID = ['weapon', 'helmet', 'coat', 'bracers', 'pants', 'shoes'];
+      const eq = this.globalUpgradeSystem.save.equipped;
+      for (const k of Object.keys(eq)) {
+        if (!VALID.includes(k)) { delete eq[k]; continue; } // 旧部位名（armor/boots/gloves/accessory）清除
+        if (Array.isArray(eq[k])) eq[k] = eq[k][0] ?? null;  // 数组取第一
+        if (eq[k] == null) delete eq[k];
+      }
+    }
+          this.globalUpgradeSystem.save.equipped[item.slot] = entry.uid;
+        } else if (!wear && entry) {
+          this.save.gold = (this.save.gold || 0) + this.forgeSystem.getScrapValue(entry.uid);
+          this.forgeSystem.scrap(entry.uid);
         }
         this._persistGlobalSave();
       },
@@ -232,8 +265,7 @@ export class GameScene extends Phaser.Scene {
     this.input.once('pointerdown', () => {
       audio.unlock();
       audio.startBgm();
-    });
-    // 场地点击 = 施放当前选中技能（默认 attack）
+    });    // 场地点击 = 施放当前选中技能（默认 attack）
     this.input.on('pointerdown', (pointer) => {
       if (this._anyOverlayVisible() || this._clickBlocked()) return;
       // 点击在 interactive UI（按钮/技能图标）上时不施放技能
@@ -375,11 +407,16 @@ export class GameScene extends Phaser.Scene {
     const skill = this.state.player.skills.find(s => s.id === skillId);
     if (!skill) return;
     const isSelect = skillId === selectedId && skillId !== 'attack';
-    const msg = skill.currentCooldown > 0
-      ? `${skill.name} 冷却中...`
-      : isSelect
-        ? `已选中【${skill.name}】— 点击战场任意位置释放`
-        : `已切换回【射击】（自动锁定）`;
+    let msg;
+    if (skill.type === 'passive') {
+      msg = `【${skill.name}】是被动技能 · 常驻生效，无需释放`; // 被动点击提示
+    } else if (skill.currentCooldown > 0) {
+      msg = `${skill.name} 冷却中...`;
+    } else if (isSelect) {
+      msg = `已选中【${skill.name}】— 点击战场任意位置释放`;
+    } else {
+      msg = `已切换回【射击】（自动锁定）`;
+    }
     this.hintText = this.add.text(GAME_WIDTH / 2, 200, msg, {
       fontSize: '14px', fill: '#ffdd88', fontFamily: 'Arial', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
@@ -443,6 +480,18 @@ export class GameScene extends Phaser.Scene {
 
     if (waveResult?.type === 'waveComplete') {
       this.state.gold += waveResult.goldBonus;
+      // 波次通关小概率掉锻造石/图纸（材料获取途径）
+      if (this.rng_flag === undefined) { this.rng_flag = 0; }
+      if (Math.random() < 0.18) {
+        const stones = 1 + Math.floor(Math.random() * 3);
+        this.globalUpgradeSystem.save.forgeStones = (this.globalUpgradeSystem.save.forgeStones || 0) + stones;
+        this.effects.floatingText(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80, `⚒️ 锻造石 +${stones}`, '#88ddff', 12);
+      }
+      if (Math.random() < 0.10) {
+        const notes = 1 + Math.floor(Math.random() * 2);
+        this.globalUpgradeSystem.save.gunNotes = (this.globalUpgradeSystem.save.gunNotes || 0) + notes;
+        this.effects.floatingText(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 100, `📜 枪械图纸 +${notes}`, '#ffcc88', 12);
+      }
       this.showWaveComplete(waveResult.wave, waveResult.goldBonus, waveResult.perfectWave);
       if (waveResult.levelCleared) {
         this.time.delayedCall(1200, () => this._onLevelCleared());
@@ -461,6 +510,19 @@ export class GameScene extends Phaser.Scene {
           this.effects.hitSparks(pos.x, pos.y, ev.skill || 'attack');
           if (ev.isCrit) { audio.crit(); this.cameras.main.shake(60, 0.003); }
           else audio.hit();
+          break;
+        }
+        case 'mercFire': {
+          // 出战佣兵开火反馈：图标高亮脉冲 + 从佣兵位置发出手光圈（用佣兵专属色）
+          const spr = this._mercSprites?.[ev.slotIdx];
+          if (spr) {
+            this.tweens.add({ targets: spr, scale: { from: 1.6, to: 1 }, duration: 260, ease: 'Cubic.easeOut' });
+            spr.setTintFill(0xffffff);
+            this.time.delayedCall(120, () => spr.clearTint());
+          }
+          const basePos = gridToPixel(this.state.player.x, this.state.player.y);
+          const mx = basePos.x + (ev.slotIdx === 0 ? -36 : 36);
+          this.effects.impactRing(mx, basePos.y - 16, ev.color || 0xffcc88);
           break;
         }
         case 'projectileHit': {
@@ -488,6 +550,8 @@ export class GameScene extends Phaser.Scene {
           if (ev.skill === 'dryice' || ev.skill === 'icestorm') audio.freeze();
           if (ev.skill === 'empierce') audio.lightning();
           if (ev.skill === 'ray') audio.laser();
+          if (ev.skill === 'cyclone') audio.cyclone();
+          if (ev.skill === 'leapwave') audio.leapwave();
           break;
         }
         case 'beamEffect': {
@@ -495,7 +559,7 @@ export class GameScene extends Phaser.Scene {
           break;
         }
         case 'zoneEffect': {
-          // 地面区域（燃油弹火区/冰暴）：持续橙/蓝色光圈
+          // 地面区域（燃油弹火区/冰暴/时空裂隙）：持续光圈
           const p = gridToPixel(ev.x, ev.y);
           const g = this.add.graphics().setDepth(35);
           g.fillStyle(ev.color, 0.22);
@@ -503,11 +567,11 @@ export class GameScene extends Phaser.Scene {
           g.lineStyle(2, ev.color, 0.8);
           g.strokeCircle(p.x, p.y, ev.radius * GRID.CELL_SIZE);
           this.tweens.add({ targets: g, alpha: 0, duration: (ev.radius || 2) * 700, onComplete: () => g.destroy() });
-          audio.explode();
+          if (ev.skill === 'rift') audio.rift(); else audio.explode();
           break;
         }
         case 'lineEffect': {
-          // 直线穿透（电磁穿刺/气刃）：沿方向的光束
+          // 直线穿透（电磁穿刺/气刃/跃迁电子）：沿方向的光束
           const from = gridToPixel(ev.x, ev.y);
           const g = this.add.graphics().setDepth(155);
           g.lineStyle(4, ev.skill === 'empierce' ? 0xffff00 : 0xaaffcc, 0.5);
@@ -523,6 +587,7 @@ export class GameScene extends Phaser.Scene {
           const ring = this.add.circle(from.x, from.y, 20, 0xaaffcc, 0.0).setDepth(155);
           ring.setStrokeStyle(4, 0xaaffcc, 0.8);
           this.tweens.add({ targets: ring, radius: 260, alpha: 0, duration: 400, onComplete: () => ring.destroy() });
+          audio.cyclone();
           break;
         }
         case 'guidedEffect': {
@@ -536,15 +601,24 @@ export class GameScene extends Phaser.Scene {
           lock.setStrokeStyle(2, 0xff66aa, 1);
           this.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
           this.tweens.add({ targets: lock, radius: 4, alpha: 0, duration: 300, onComplete: () => lock.destroy() });
-          audio.laser();
+          audio.guided();
           break;
         }
         case 'sweepEffect': {
-          // 装甲车：横贯行的碾压光带
-          const rowY = GRID.OFFSET_Y + ev.row * GRID.CELL_SIZE + GRID.CELL_SIZE / 2;
-          const band = this.add.rectangle(GAME_WIDTH / 2, rowY, GAME_WIDTH, 26, 0xccaa66, 0.35).setDepth(155);
+          // 装甲车：竖列碾压光带（沿 Y 轴）
+          const colX = GRID.OFFSET_X + ev.col * GRID.CELL_SIZE + GRID.CELL_SIZE / 2;
+          const band = this.add.rectangle(colX, GRID.OFFSET_Y + (this.state.wallRow * GRID.CELL_SIZE) / 2, 30, this.state.wallRow * GRID.CELL_SIZE, 0xccaa66, 0.3).setDepth(155);
           this.tweens.add({ targets: band, alpha: 0, duration: 450, onComplete: () => band.destroy() });
           this.cameras.main.shake(200, 0.005);
+          audio.vehicle();
+          break;
+        }
+        case 'instantKill': {
+          // 秒杀宝石触发
+          const pos = gridToPixel(ev.target.col, ev.target.row);
+          this.effects.floatingText(pos.x, pos.y - 22, '⚡ 秒杀!', '#ff44dd', 14);
+          this.effects.deathPoof(pos.x, pos.y);
+          audio.explode();
           break;
         }
         case 'kill': {
@@ -555,10 +629,10 @@ export class GameScene extends Phaser.Scene {
           break;
         }
         case 'itemDrop': {
-          // 原版式：掉落即时飘提示（不打断战斗），波间仍弹拾取确认窗
-          const item = ev.item;
-          const pos = gridToPixel(ev.target?.col ?? this.state.player.x, ev.target?.row ?? this.state.player.y);
-          this.effects.floatingText(pos.x, pos.y - 30, `📦 ${item.name}`, '#88ddff', 12);
+          // 原版式：掉落即时飘提示（品质+部位），装备已自动入仓
+          const slotNames = { weapon: '武器', helmet: '头盔', coat: '衣服', bracers: '护臂', pants: '腰饰', shoes: '鞋子' };
+          const qName = { white: '白', green: '绿', blue: '蓝', purple: '紫', orange: '橙', red: '红', rainbow: '彩' }[ev.item.rarity] || '';
+          this.effects.floatingText(GAME_WIDTH / 2, 200, `📦 ${qName}·${slotNames[ev.item.slot] || '装备'} 入仓`, '#88ddff', 12);
           audio.uiClick();
           break;
         }
@@ -704,12 +778,10 @@ export class GameScene extends Phaser.Scene {
     // 本局装备：失败时默认全部自动入仓（不打断情绪，进锻造可再分解）
     const loot = [...this.state.pendingLoot];
     if (loot.length > 0) {
-      for (const item of loot) {
-        this.forgeSystem.addEquipment(item.id);
-        this.state.resolveLoot(item, { wear: false });
-      }
+      // 拾取时已入仓——此处只需清理 pendingLoot 标记并持久化
+      for (const item of loot) this.state.resolveLoot(item, { wear: false });
       this._persistGlobalSave();
-      this.add.text(cx, cy + 15, `📦 ${loot.length} 件装备已自动存入锻造仓库`, { fontSize: '13px', fill: '#88ddff', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(301);
+      this.add.text(cx, cy + 15, `📦 ${loot.length} 件装备已存入锻造仓库`, { fontSize: '13px', fill: '#88ddff', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(301);
     }
 
     // 两个大按钮：再来一次 / 返回主菜单（对齐原版失败界面）

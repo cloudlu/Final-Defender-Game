@@ -42,7 +42,349 @@
       },
       "weak": {},
       "stageNode": 15,
-      "nameCN": "烈焰掌控者（原型）——完全免疫燃烧/冰系"
+      "nameCN": "烈焰掌控者（原型）——完全免疫燃烧/冰系",
+      "grade": "B"
+    },
+    {
+      "id": "boss_leviathan",
+      "name": "深海巨兽",
+      "icon": "🐋",
+      "hp": 5200,
+      "speed": 0.4,
+      "armor": 8,
+      "bounty": 0,
+      "wallDamage": 10,
+      "size": 30,
+      "color": "#3366aa",
+      "resist": {
+        "fire": 1
+      },
+      "weak": {
+        "electric": 0.5
+      },
+      "resistFreeze": true,
+      "freezeHeal": true,
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 8,
+          "enemyId": "enemy_flyer",
+          "count": 2
+        },
+        {
+          "type": "roar",
+          "interval": 13,
+          "silenceSeconds": 2,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 800,
+        "diamond": 80
+      },
+      "desc": "免疫燃烧；弱电；被冻结会回血",
+      "grade": "A"
+    },
+    {
+      "id": "boss_breaker",
+      "name": "元素破解者",
+      "icon": "🛡️",
+      "hp": 4600,
+      "speed": 0.5,
+      "armor": 4,
+      "bounty": 0,
+      "wallDamage": 10,
+      "size": 28,
+      "color": "#9966cc",
+      "elementImmune": true,
+      "weak": {
+        "physical": 0.5
+      },
+      "skills": [
+        {
+          "type": "speedBurst",
+          "interval": 10,
+          "multiplier": 2.2,
+          "duration": 3,
+          "warnSeconds": 1
+        },
+        {
+          "type": "summon",
+          "interval": 12,
+          "enemyId": "enemy_bucket",
+          "count": 2
+        }
+      ],
+      "reward": {
+        "gold": 1000,
+        "diamond": 100
+      },
+      "desc": "免疫所有元素伤害；弱物理 50%——纯物理体系应对",
+      "grade": "A"
+    },
+    {
+      "id": "boss_troll",
+      "name": "巨魔僵尸首领",
+      "icon": "👹",
+      "hp": 6000,
+      "speed": 0.42,
+      "armor": 6,
+      "bounty": 0,
+      "wallDamage": 12,
+      "size": 32,
+      "color": "#557733",
+      "immuneKnock": true,
+      "weak": {
+        "fire": 0.5
+      },
+      "healOnHurt": true,
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 9,
+          "enemyId": "enemy_runner",
+          "count": 3
+        },
+        {
+          "type": "roar",
+          "interval": 12,
+          "silenceSeconds": 1.5,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 1200,
+        "diamond": 120
+      },
+      "desc": "免击退眩晕麻痹；弱火；受伤后回血",
+      "grade": "B"
+    },
+    {
+      "id": "boss_flame_lord",
+      "name": "烈焰掌控者",
+      "icon": "🔥",
+      "grade": "S",
+      "hp": 8000,
+      "speed": 0.45,
+      "armor": 8,
+      "bounty": 0,
+      "wallDamage": 12,
+      "size": 32,
+      "color": "#ff5522",
+      "resist": {
+        "fire": 1,
+        "ice": 1,
+        "burn": 1
+      },
+      "weak": {
+        "physical": 0
+      },
+      "immuneKnock": true,
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 8,
+          "enemyId": "enemy_runner",
+          "count": 3
+        },
+        {
+          "type": "speedBurst",
+          "interval": 11,
+          "multiplier": 2,
+          "duration": 3,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 1500,
+        "diamond": 150
+      },
+      "desc": "S级：免疫燃烧/冰系/火系；靠近城墙造成大量伤害——物理枪应对"
+    },
+    {
+      "id": "boss_pioneer",
+      "name": "开垦者首领",
+      "icon": "🚜",
+      "grade": "S",
+      "hp": 7500,
+      "speed": 0.42,
+      "armor": 7,
+      "bounty": 0,
+      "wallDamage": 12,
+      "size": 30,
+      "color": "#886644",
+      "resist": {
+        "fire": 1,
+        "ice": 1,
+        "physical": 1
+      },
+      "weak": {
+        "wind": 1
+      },
+      "immuneKnock": true,
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 9,
+          "enemyId": "enemy_bucket",
+          "count": 2
+        },
+        {
+          "type": "roar",
+          "interval": 11,
+          "silenceSeconds": 2,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 1500,
+        "diamond": 150
+      },
+      "desc": "S级：免疫燃烧/麻痹/晕眩/击退/物理；弱风系（+100%）——远程攻击"
+    },
+    {
+      "id": "boss_watcher",
+      "name": "看守者首领",
+      "icon": "👁️",
+      "grade": "B",
+      "hp": 5000,
+      "speed": 0.35,
+      "armor": 6,
+      "bounty": 0,
+      "wallDamage": 10,
+      "size": 28,
+      "color": "#445577",
+      "resist": {
+        "physical": 0.9
+      },
+      "weak": {
+        "ice": 0.5
+      },
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 10,
+          "enemyId": "enemy_basic",
+          "count": 2
+        },
+        {
+          "type": "speedBurst",
+          "interval": 12,
+          "multiplier": 1.8,
+          "duration": 3,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 1000,
+        "diamond": 100
+      },
+      "desc": "B级：免疫晕眩麻痹；弹道减伤 90%；弱冰——行动缓慢可双击"
+    },
+    {
+      "id": "boss_storm",
+      "name": "风暴先锋首领",
+      "icon": "⛈️",
+      "grade": "B",
+      "hp": 4800,
+      "speed": 0.55,
+      "armor": 4,
+      "bounty": 0,
+      "wallDamage": 10,
+      "size": 28,
+      "color": "#5566aa",
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 9,
+          "enemyId": "enemy_flyer",
+          "count": 2
+        },
+        {
+          "type": "speedBurst",
+          "interval": 10,
+          "multiplier": 2,
+          "duration": 2.5,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 1000,
+        "diamond": 100
+      },
+      "desc": "B级：物理系 BOSS——无特殊免疫"
+    },
+    {
+      "id": "boss_chaos",
+      "name": "混沌制造者",
+      "icon": "🌀",
+      "grade": "A",
+      "hp": 7000,
+      "speed": 0.45,
+      "armor": 6,
+      "bounty": 0,
+      "wallDamage": 11,
+      "size": 30,
+      "color": "#7744aa",
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 8,
+          "enemyId": "enemy_bomber",
+          "count": 2
+        },
+        {
+          "type": "roar",
+          "interval": 12,
+          "silenceSeconds": 2,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 1200,
+        "diamond": 120
+      },
+      "desc": "A级：物理枪系 BOSS（100/150/200 关里程碑）"
+    },
+    {
+      "id": "boss_gluttony",
+      "name": "暴食者首领",
+      "icon": "👄",
+      "grade": "B",
+      "hp": 4200,
+      "speed": 0.5,
+      "armor": 3,
+      "bounty": 0,
+      "wallDamage": 10,
+      "size": 28,
+      "color": "#aa5544",
+      "resist": {
+        "wind": 0.7
+      },
+      "immuneKnock": true,
+      "weak": {
+        "energy": 0.5
+      },
+      "skills": [
+        {
+          "type": "summon",
+          "interval": 8,
+          "enemyId": "enemy_runner",
+          "count": 2
+        },
+        {
+          "type": "speedBurst",
+          "interval": 12,
+          "multiplier": 1.8,
+          "duration": 3,
+          "warnSeconds": 1
+        }
+      ],
+      "reward": {
+        "gold": 900,
+        "diamond": 90
+      },
+      "desc": "B级：减 70% 风伤、免疫击退；弱能量系——血量较低相对简单"
     }
   ]
 }

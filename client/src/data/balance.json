@@ -5,30 +5,58 @@
   "difficultyScalePerWave": 0.12,
   "bossInterval": 5,
   "modifierCap": {
-    "damage": 3.0,
-    "attackSpeed": 2.0,
+    "damage": 3,
+    "attackSpeed": 2,
     "range": 5,
     "critRate": 0.75,
-    "critDamage": 3.0,
-    "slowPct": 0.80,
-    "goldBonus": 2.0,
-    "xpBonus": 2.0
+    "critDamage": 3,
+    "slowPct": 0.8,
+    "goldBonus": 2,
+    "xpBonus": 2
   },
   "starThresholds": {
-    "threeStar": 0.80,
-    "twoStar": 0.50,
+    "threeStar": 0.8,
+    "twoStar": 0.5,
     "oneStar": 0.01
   },
   "perfectWaveBonus": 30,
   "dailyRewards": {
     "cycle": [
-      { "day": 1, "type": "gold", "amount": 500 },
-      { "day": 2, "type": "diamond", "amount": 50 },
-      { "day": 3, "type": "gold", "amount": 1500 },
-      { "day": 4, "type": "diamond", "amount": 100 },
-      { "day": 5, "type": "gold", "amount": 5000 },
-      { "day": 6, "type": "diamond", "amount": 200 },
-      { "day": 7, "type": "diamond", "amount": 300 }
+      {
+        "day": 1,
+        "type": "gold",
+        "amount": 500
+      },
+      {
+        "day": 2,
+        "type": "diamond",
+        "amount": 50
+      },
+      {
+        "day": 3,
+        "type": "gold",
+        "amount": 1500
+      },
+      {
+        "day": 4,
+        "type": "stone",
+        "amount": 30
+      },
+      {
+        "day": 5,
+        "type": "gold",
+        "amount": 5000
+      },
+      {
+        "day": 6,
+        "type": "notes",
+        "amount": 10
+      },
+      {
+        "day": 7,
+        "type": "diamond",
+        "amount": 300
+      }
     ],
     "streakBreakHours": 48
   }

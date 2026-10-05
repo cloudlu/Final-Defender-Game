@@ -12,7 +12,7 @@ import { distanceCells, GRID } from './GridConstants.js';
 let nextProjectileId = 1;
 
 export class GameState {
-  constructor(enemyConfigs, balanceConfig, equipmentData = [], levelRuntime = null, { globalUpgrades = null, forgeSystem = null, equippedMap = null, bossConfig = null, vipSystem = null, mercenarySystem = null, rngSeed = Date.now() } = {}) {
+  constructor(enemyConfigs, balanceConfig, equipmentData = [], levelRuntime = null, { globalUpgrades = null, forgeSystem = null, equippedMap = null, bossConfig = null, vipSystem = null, mercenarySystem = null, gemSystem = null, rngSeed = Date.now() } = {}) {
     this.rng = new SeededRNG(rngSeed);
     this.wallRow = GRID.ROWS; // 城墙线：敌人越过 row 12 即漏怪
 
@@ -38,6 +38,7 @@ export class GameState {
     this.modifiers = new ModifierPipeline(balanceConfig.modifierCap);
     this.xpOrbs = new XpOrbSystem(this.player);
     this.groundZones = new GroundZoneSystem();
+    this.gemSystem = gemSystem;           // GemSystem 实例（可空，v4.9）
     this.gold = balanceConfig.startingGold;
     this.lives = this.wallHpMax;
     this.score = 0;
@@ -47,7 +48,7 @@ export class GameState {
     this.gameOver = false;
     this.events = [];
     this.pendingItem = null;
-    this.pendingLoot = []; // 本局拾取的装备暂存栏（战斗零打断，结算时统一处理）
+    this.pendingLoot = []; // 本局拾取的装备（拾取即入仓，此列表仅供结算页展示快捷操作）
 
     this.speed = 1;
     this.paused = false;
@@ -56,7 +57,7 @@ export class GameState {
     // 枪械弹匣（原版：弹夹默认 30 发）
     this.magazineSize = 30;
     this.ammo = 30;
-    this.reloadTime = 1.5;
+    this.reloadTime = 1.0;
     this.reloadTimer = 0;
     this._reloading = false;
 
@@ -131,7 +132,7 @@ export class GameState {
       for (const e of this.enemies) {
         if (!e.alive) continue;
         if (distanceCells(tx, ty, e.col, e.row) <= result.aoe) {
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: e });
           this._hitEnemy(e, damage, { element: skill.element, skill: skillId });
           this.events.push({ type: 'hit', target: e, damage, isCrit, killed: !e.alive, skill: skillId });
           if (!e.alive) this._onKill(e);
@@ -150,7 +151,7 @@ export class GameState {
         if (proj < 0) continue;
         const perp = Math.abs(vx * uy - vy * ux); // 到线的垂距
         if (perp <= 0.7) {
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: e });
           const killed = e.takeDamage(damage);
           this.events.push({ type: 'hit', target: e, damage, isCrit, killed, skill: skillId });
           if (result.effect) this._applyEffect(e, result.effect);
@@ -170,7 +171,7 @@ export class GameState {
         if (dot > 0.4) { // 半张角约 66°
           const kbPower = result.effect?.power || 2.5;
           e.knockback(kbPower);
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: e });
           const killed = e.takeDamage(damage);
           this.events.push({ type: 'hit', target: e, damage, isCrit, killed, skill: skillId });
           if (killed) this._onKill(e);
@@ -181,7 +182,7 @@ export class GameState {
       // 制导（制导激光/制导电磁）：锁定全场最高 HP 敌人大额伤害
       const target = this.enemies.filter(e => e.alive).sort((a, b) => b.hp - a.hp)[0];
       if (target) {
-        const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+        const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: target });
         this._hitEnemy(target, damage, { element: skill.element, skill: skillId });
         this.events.push({ type: 'hit', target, damage, isCrit, killed: !target.alive, skill: skillId });
         if (result.effect && target.alive) this._applyEffect(target, result.effect);
@@ -189,25 +190,25 @@ export class GameState {
         this.events.push({ type: 'guidedEffect', skill: skillId, targetId: target.id, col: target.col, row: target.row });
       }
     } else if (result.type === 'sweep') {
-      // 装甲车：从英雄所在行横向扫过整行（穿透+概率眩晕）
-      const row = ty;
+      // 装甲车：沿 Y 轴竖列碾压（原版：直线无限穿透），命中该列所有敌人
+      const col = tx;
       for (const e of this.enemies) {
         if (!e.alive) continue;
-        if (Math.abs(e.row - row) <= result.aoe) {
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+        if (Math.abs(e.col - col) <= result.aoe) {
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, e.row, { enemy: e });
           const killed = e.takeDamage(damage);
           this.events.push({ type: 'hit', target: e, damage, isCrit, killed, skill: skillId });
-          if (result.effect && this.rng.next() < 0.5) this._applyEffect(e, result.effect); // 50% 眩晕
+          if (result.effect && this.rng.next() < 0.05) this._applyEffect(e, result.effect); // 原版 18 级 5% 概率眩晕
           if (killed) this._onKill(e);
         }
       }
-      this.events.push({ type: 'sweepEffect', skill: skillId, row, dir: tx >= this.player.x ? 1 : -1 });
+      this.events.push({ type: 'sweepEffect', skill: skillId, col, dir: 1 });
     } else if (result.type === 'airstrike') {
       // 空投轰炸：延迟 0.4s 落地的大范围爆炸（覆盖落点圈）
       for (const e of this.enemies) {
         if (!e.alive) continue;
         if (distanceCells(tx, ty, e.col, e.row) <= result.aoe) {
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: e });
           const killed = e.takeDamage(damage);
           this.events.push({ type: 'hit', target: e, damage, isCrit, killed, skill: skillId });
           if (killed) this._onKill(e);
@@ -221,7 +222,7 @@ export class GameState {
       for (const e of this.enemies) {
         if (!e.alive) continue;
         if (Math.abs(e.col - col) <= 0.6) {
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: e });
           const killed = e.takeDamage(damage);
           this.events.push({ type: 'hit', target: e, damage, isCrit, killed, skill: skillId });
           if (result.effect) this._applyEffect(e, result.effect);
@@ -239,7 +240,7 @@ export class GameState {
       for (const e of this.enemies) {
         if (!e.alive) continue;
         if (distanceCells(bx, by, e.col, e.row) <= result.aoe) {
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: e });
           const killed = e.takeDamage(damage);
           this.events.push({ type: 'hit', target: e, damage, isCrit, killed, skill: skillId });
           if (killed) this._onKill(e);
@@ -251,7 +252,7 @@ export class GameState {
         if (!enemy.alive) continue;
         const dist = distanceCells(tx, ty, enemy.col, enemy.row);
         if (dist <= result.aoe) {
-          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+          const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy });
           const killed = enemy.takeDamage(damage);
           this.events.push({ type: 'hit', target: enemy, damage, isCrit, killed, skill: skillId });
           affected.push({ enemy, killed });
@@ -269,7 +270,7 @@ export class GameState {
       const hit = new Set();
       if (anchor) {
         // 锚点敌人吃满第一跳伤害
-        const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+        const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy: anchor });
         const killed = anchor.takeDamage(damage);
         this.events.push({ type: 'hit', target: anchor, damage, isCrit, killed, chain: true, chainFrom: { col: cx, row: cy }, skill: skillId });
         affected.push({ enemy: anchor, killed });
@@ -283,7 +284,7 @@ export class GameState {
         const enemy = targets.find(t => !hit.has(t.id));
         if (!enemy) break;
         hit.add(enemy.id);
-        const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty);
+        const { damage, isCrit } = this._rollDamageWithCrit(stats, skill.damage, ty, { element: skill.element, skillId, enemy });
         const killed = enemy.takeDamage(damage);
         this.events.push({ type: 'hit', target: enemy, damage, isCrit, killed, chain: true, chainFrom: { col: cx, row: cy }, skill: skillId });
         affected.push({ enemy, killed });
@@ -295,12 +296,26 @@ export class GameState {
     return { result, affected };
   }
 
-  /** Resolve base damage through the modifier pipeline with a crit roll. enemyRow 可选：启用距离系数 */
-  _rollDamageWithCrit(stats, baseDamage, enemyRow = null) {
+  /** Resolve base damage through the modifier pipeline with a crit roll.
+   *  enemyRow 可选：距离系数；element/skillId 可选：宝石六系/技能专属增伤；
+   *  enemy 可选：精英/首领增伤判定（v8.12 修复：旧版引用未定义 enemy 直接 ReferenceError） */
+  _rollDamageWithCrit(stats, baseDamage, enemyRow = null, { element = null, skillId = null, enemy = null } = {}) {
     let dmg = stats.damage * baseDamage;
     if (enemyRow !== null) dmg *= this._distanceMultiplier(enemyRow);
+    // 宝石：六系伤害 / 技能专属伤害（对齐原版词条乘区）
+    const sp = this.gemSpecials;
+    if (sp) {
+      if (element && sp.elements?.[element]) dmg *= 1 + sp.elements[element] / 100;
+      if (skillId && sp.skillDmg?.[skillId]) dmg *= 1 + sp.skillDmg[skillId] / 100;
+      if (sp.explodeDamage && ['thermobaric', 'airstrike', 'grenade'].includes(skillId)) {
+        dmg *= 1 + sp.explodeDamage / 100;
+      }
+      if (sp.eliteDamage && enemy && (enemy.isBoss || enemy.elite)) {
+        dmg *= 1 + sp.eliteDamage / 100;
+      }
+    }
     const isCrit = this.rng.next() < stats.critRate;
-    if (isCrit) dmg *= stats.critDamage; // 暴击倍率（原版此前缺失，静默 bug 已修）
+    if (isCrit) dmg *= stats.critDamage;
     return { damage: dmg, isCrit };
   }
 
@@ -317,10 +332,18 @@ export class GameState {
     const mods = [
       ...this.equipmentManager.getAllModifiers(),
       ...(this.forgeSystem ? this.forgeSystem.getEquippedModifiers(this.equippedMap || {}) : []),
-      ...(this.vipSystem ? this.vipSystem.getAllModifiers() : []),
       ...(this.player.pendingStatMods || []),
       ...(this.globalUpgrades ? this.globalUpgrades.getAllModifiers() : []),
     ];
+    // 宝石：通用词条进管线；特殊词条缓存供战斗事件消费
+    if (this.gemSystem) {
+      const { mods: gemMods, specials } = this.gemSystem.getAllModifiers();
+      mods.push(...gemMods);
+      this.gemSpecials = specials;
+    } else {
+      this.gemSpecials = null;
+    }
+    // 装备附加属性已并入 getEquippedModifiers（v7.2 属性容器重构）
     // 佣兵被动攻击加成（拥有即生效，原版核心）：以 add 注入枪械伤害基数
     if (this.mercenarySystem) {
       const mercAtk = this.mercenarySystem.getTotalPassiveAttack();
@@ -377,9 +400,22 @@ export class GameState {
     // 狂暴巨人免疫控制（晕眩/减速/冻结）
     const isControl = ['stun', 'freeze', 'slow', 'knockback'].includes(effect.type);
     if (enemy.enraged && isControl) return;
+    // 负面时间减免（胆小僵尸 -100%、巨食者 -50%）：控制/dot/burn 持续时间按比例缩短
+    const negResist = enemy.negativeTimeResist || 0;
+    if (effect.duration && negResist > 0) {
+      const eff = { ...effect, duration: effect.duration * (1 - negResist) };
+      if (eff.duration <= 0) return; // 完全免疫
+      return this._applyEffect(enemy, eff);
+    }
     if (effect.type === 'slow') { enemy.slowFactor = effect.factor; enemy.slowTimer = effect.duration; }
-    else if (effect.type === 'dot' || effect.type === 'burn') { enemy.dotEffects.push({ damage: effect.damage, duration: effect.duration }); }
-    else if (effect.type === 'stun') { enemy.stunTimer = Math.max(enemy.stunTimer, effect.duration); }
+    else if (effect.type === 'dot' || effect.type === 'burn') {
+      if (enemy.burnImmune && effect.type === 'burn') return; // 火焰僵尸/巨齿鲨：免疫燃烧
+      enemy.dotEffects.push({ damage: effect.damage, duration: effect.duration });
+    }
+    else if (effect.type === 'stun') {
+      if (enemy.stunImmune) return; // 傀儡：免疫眩晕
+      enemy.stunTimer = Math.max(enemy.stunTimer, effect.duration);
+    }
     else if (effect.type === 'freeze') enemy.freeze(effect.duration);
     else if (effect.type === 'knockback') enemy.knockback(effect.power || 1.5);
   }
@@ -390,10 +426,34 @@ export class GameState {
     this.gold += bounty;
     this.score += bounty;
     this.killedThisWave++;
+    // 死亡光环（护士/咸鱼僵尸）：死亡时治疗周围怪物（原版机制）
+    if (enemy.deathHealAura > 0) {
+      let healed = 0;
+      for (const other of this.enemies) {
+        if (!other.alive || other === enemy) continue;
+        if (distanceCells(enemy.col, enemy.row, other.col, other.row) <= 2.5) {
+          other.hp = Math.min(other.maxHp, other.hp + other.maxHp * enemy.deathHealAura);
+          healed++;
+        }
+      }
+      if (healed > 0) {
+        this.events.push({ type: 'healAura', x: enemy.col, y: enemy.row, healed });
+      }
+    }
     // 经验球：击杀掉球，吸附到英雄时结算 XP（加成在吸收时算）
     this.xpOrbs.spawn(enemy.col, enemy.row, 1, () => this.rng.next());
     const drop = this.equipmentManager.rollDrop(this.rng);
-    if (drop) { this.pendingLoot.push(drop); this.events.push({ type: 'itemDrop', item: drop }); }
+    if (drop) {
+      // 原版语义：掉落即获得——立刻入锻造仓库（属性容器，v7.2）
+      this.pendingLoot.push(drop);
+      if (this.forgeSystem) {
+        const slots = ['weapon', 'helmet', 'coat', 'bracers', 'pants', 'shoes'];
+        const slot = slots[Math.floor(this.rng.next() * slots.length)];
+        const qMap = { white: 'white', blue: 'blue', purple: 'purple', orange: 'orange' };
+        this.forgeSystem.generate({ slot, tier: Math.max(1, Math.ceil(this.waveManager.currentWave / 10)), quality: qMap[drop.rarity] || 'white', rngLike: this.rng });
+      }
+      this.events.push({ type: 'itemDrop', item: drop });
+    }
 
     // Split behavior: spawn children at the parent's position (children give no bounty)
     const split = enemy.getSplitConfig();
@@ -437,8 +497,8 @@ export class GameState {
     dt *= this.speed;
     if (this.invulnTimer > 0) this.invulnTimer = Math.max(0, this.invulnTimer - dt);
 
-    // 自动出波倒计时（波间递减，到 0 自动开波）
-    if (!this.waveManager.waveActive && this.waveCountdown > 0) {
+    // 自动出波倒计时（波间递减，到 0 自动开波）；通关后停止（等玩家点结算）
+    if (!this.waveManager.waveActive && this.waveCountdown > 0 && !this.levelCleared) {
       this.waveCountdown -= dt;
       if (this.waveCountdown <= 0) {
         this.waveCountdown = 0;
@@ -484,9 +544,11 @@ export class GameState {
     // Player
     this.player.update(dt);
     const stats = this.getResolvedStats();
-    this.player.autoAttackInterval = 0.4 / stats.attackSpeed;
+    // 攻速同时作用于射击间隔与枪械自身冷却（消除双闸门节拍漏射）；3 位取整防浮点尾数（0.22000000000003）
+    this.player.setAttackCadence(Math.round((0.4 / stats.attackSpeed) * 1000) / 1000);
 
     // 枪械弹匣：空匣换弹（原版弹夹 30 发）
+    // 换弹时间也受攻速加成（攻速越高换弹越快）——消除"攻速快反而换弹停顿刺耳"的感知问题
     if (this._reloading) {
       this.reloadTimer -= dt;
       if (this.reloadTimer <= 0) {
@@ -494,18 +556,17 @@ export class GameState {
         this.ammo = this.magazineSize;
         this.events.push({ type: 'reloadDone' });
       }
+    } else if (this.ammo <= 0) {
+      this._reloading = true;
+      this.reloadTimer = this.reloadTime / stats.attackSpeed;
+      this.events.push({ type: 'reloading', duration: this.reloadTimer });
     }
 
     this.player.autoAttackTimer = Math.max(0, this.player.autoAttackTimer - dt);
-    const auto = this.player.autoAttack(this.enemies);
+    const auto = (!this._reloading) ? this.player.autoAttack(this.enemies) : null;
     if (auto && !this._reloading) {
-      // 消耗弹药；空匣 → 进入换弹
+      // 消耗弹药（空匣触发在上方统一处理，换弹时间吃攻速加成）
       this.ammo--;
-      if (this.ammo <= 0) {
-        this._reloading = true;
-        this.reloadTimer = this.reloadTime;
-        this.events.push({ type: 'reloading', duration: this.reloadTime });
-      }
       const targets = this.enemies.filter(e => e.alive).sort((a, b) => b.row - a.row);
       if (targets[0]) {
         const pierceLv = this.player.getPassiveLevel('pierce');
@@ -526,8 +587,11 @@ export class GameState {
           const size = Math.min(7, (2 + (stats.damage - 1) * 1.5) * (1 + 0.4 * giantLv));
           const isMainLane = laneIdx === Math.floor((lanes - 1) / 2);
           // 原版弹道：全部直线弹（锁定发射瞬间目标位置，飞行中不跟随）
+          // 枪械伤害宝石只加成本弹道（原版：枪械攻击独立）
+          // 枪械伤害宝石 + 枪械研发（对齐原版双独立乘区：枪械只吃枪械加成）
+          const gunMult = (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1);
           this._createProjectile('attack', this.player.x, this.player.y, t.col + spread + laneOffset, t.row, {
-            damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * (isMainLane ? 1 : 0.6),
+            damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * (isMainLane ? 1 : 0.6) * gunMult,
             targetEnemy: null,
             color: stats.damage > 1.5 ? 0x88ffcc : 0xffffff, size,
             speed: 22, pierce: pierceLv,
@@ -549,7 +613,7 @@ export class GameState {
         this._mercTimers[idx] = Math.max(0, this._mercTimers[idx] - dt);
         if (this._mercTimers[idx] <= 0 && this.enemies.some(e => e.alive)) {
           this._mercTimers[idx] = merc.interval;
-          this._fireMercenary(merc);
+          this._fireMercenary(merc, idx);
         }
       });
     }
@@ -779,30 +843,47 @@ export class GameState {
     return 1.0;
   }
 
-  /** 统一受击入口：带元素修正（抗性/弱点）与闪避判定 */
+  /** 统一受击入口：带元素修正（抗性/弱点）、闪避判定、宝石秒杀/传送 */
   _hitEnemy(enemy, damage, { element = null, isCrit = false, skill = null } = {}) {
     if (!enemy.alive) return { killed: false, missed: false };
     // 弹道闪避（天线僵尸）：只有弹道类技能可被闪避
-    const projectileLike = !skill || ['attack', 'thermobaric', 'dryice', 'ballshot'].includes(skill);
+    const projectileLike = !skill || ['attack', 'thermobaric', 'dryice'].includes(skill);
     if (enemy.dodge > 0 && projectileLike && this.rng.next() < enemy.dodge) {
       this.events.push({ type: 'miss', target: enemy });
       return { killed: false, missed: true };
     }
-    const killed = enemy.takeDamage(damage, element, this.rng);
-    if (enemy.enraged) {
-      // 狂暴巨人免疫控制——控制效果由调用方 _applyEffect 前置判断
+    // 秒杀宝石：3% 概率秒杀小怪（对 BOSS 无效——原版设定）
+    const sp = this.gemSpecials;
+    if (sp?.instantKill > 0 && !enemy.isBoss && this.rng.next() < sp.instantKill / 100) {
+      enemy.hp = 0;
+      enemy.alive = false;
+      this.events.push({ type: 'instantKill', target: enemy });
+      return { killed: true, missed: false, instantKill: true };
     }
+    const killed = enemy.takeDamage(damage, element, this.rng);
     return { killed, missed: false };
   }
 
-  /** 佣兵出战技能：single 单体 / spread 扇形 / aoe 范围 / pierce 直线 */
-  _fireMercenary(merc) {
+  /** 佣兵出战技能：single 单体 / spread 扇形 / aoe 范围 / pierce 直线。
+   * 弹道从佣兵自身位置发出（slotIdx: 0=左佣兵 / 1=右佣兵），每佣兵专属颜色区分主角弹道 */
+  _fireMercenary(merc, slotIdx = 0) {
     const targets = this.enemies.filter(e => e.alive).sort((a, b) => b.row - a.row);
     if (targets.length === 0) return;
-    const px = this.player.x, py = this.player.y;
+    // 出发点=佣兵悬浮位（主角左右两侧 36px≈0.72 格）；颜色按佣兵技能元素区分
+    const mx = this.player.x + (slotIdx === 0 ? -0.72 : 0.72);
+    const my = this.player.y - 0.3;
+    const MERC_COLORS = {
+      merc_flame: 0xff5522,    // 火焰尖兵：炽红
+      merc_shotgun: 0xddaa33,  // 霰弹：土黄
+      merc_mg: 0xffee66,       // 机枪：亮黄
+      merc_sniper: 0x66ffcc,   // 狙击：青绿
+      merc_arrow: 0x88ff44,    // 弓箭：草绿
+      merc_chrono: 0xcc66ff,   // 时空：紫
+    };
+    const color = MERC_COLORS[merc.id] || 0xffaa44;
     const fireAt = (t, dmg) => {
-      this._createProjectile('merc', px, py - 0.5, t.col, t.row, {
-        damage: dmg, targetEnemy: null, color: 0xffcc88, size: 3, speed: 18, effect: merc.effect,
+      this._createProjectile('merc', mx, my, t.col, t.row, {
+        damage: dmg, targetEnemy: null, color, size: 4, speed: 14, effect: merc.effect, // 稍慢+大弹体：玩家可感知的佣兵弹道
       });
     };
     if (merc.type === 'spread') {
@@ -812,21 +893,100 @@ export class GameState {
         fireAt(t, merc.damage);
       }
     } else if (merc.aoe > 0) {
-      // 能量球类：落点小范围
+      // 能量球类：发射可见弹道（v8.11 修复：旧实现直接落点结算无弹道飞行，5s 间隔下玩家看不到该佣兵出手），
+      // 落点 aoe 结算由 _onProjectileEnd 的 p.aoe 分支统一处理
       const t = targets[0];
-      for (const e of this.enemies) {
-        if (!e.alive) continue;
-        if (distanceCells(t.col, t.row, e.col, e.row) <= merc.aoe) {
-          const killed = e.takeDamage(merc.damage);
-          this.events.push({ type: 'hit', target: e, damage: merc.damage, isCrit: false, killed, skill: 'merc' });
-          if (killed) this._onKill(e);
-        }
-      }
-      this.events.push({ type: 'aoeImpact', x: t.col, y: t.row, radius: merc.aoe, color: 0xffcc88 });
+      this._createProjectile('merc', mx, my, t.col, t.row, {
+        damage: merc.damage, targetEnemy: null, color, size: 5, speed: 12, aoe: merc.aoe, effect: merc.effect,
+      });
     } else {
       fireAt(targets[0], merc.damage);
     }
-    this.events.push({ type: 'mercFire', name: merc.name });
+    this.events.push({ type: 'mercFire', name: merc.name, slotIdx, color });
+  }
+
+  /**
+   * 全局战力（原版语义：战力 = 总攻击力聚合，装备/宝石/佣兵/全局强化全部折算成一个数字）。
+   * 镶嵌/拆卸宝石、换装、强化都会即时改变此值——玩家唯一的"变强"指标。
+   */
+  getTotalPower() {
+    // 1) 装备侧：六部位 基础攻击(品阶×10+品质×5) + 部位强化加成 + 词条折算
+    let equipmentPower = 0;
+    if (this.forgeSystem) {
+      const equipped = this.equippedMap || {};
+      const QUALITY_IDX = { white: 0, green: 1, blue: 2, purple: 3, orange: 4, red: 5, rainbow: 6 };
+      // 词条折算：与 GemSystem.gemPower 同锚点（百分比 × 100 基准攻）
+      const FULL = { wallHp: 0.1, critRate: 12, damage: 1, gunDamage: 1, eliteDamage: 0.8, debuffTargetDamage: 0.7, highHpTargetDamage: 0.7, lowHpWallDamage: 0.7, explodeDamage: 0.8 };
+      for (const [slot, uid] of Object.entries(equipped)) {
+        const entry = this.forgeSystem.save.inventory.find(i => i.uid === uid);
+        if (!entry) continue;
+        equipmentPower += this.forgeSystem.getBaseAttack(entry); // 基础攻击 1:1
+        for (const a of entry.affixes || []) {
+          if (a.pct) equipmentPower += a.value * (FULL[a.stat] ?? 1);      // 百分比词条 × 基准攻
+          else if (a.stat === 'wallHp') equipmentPower += a.value * 0.1;
+          else if (a.stat !== 'baseAttack') equipmentPower += a.value;     // add 型攻击 1:1（baseAttack 在底盘里）
+        }
+        equipmentPower += this.forgeSystem.getSlotLevel(slot) * 15;        // 部位强化 ≈ 每级 +15 攻
+      }
+    }
+    // 2) 宝石侧：已镶宝石折算 + 套装
+    const gemPower = this.gemSystem ? this.gemSystem.getTotalGemPower() : 0;
+    // 3) 佣兵被动（拥有即加攻——原版 1:1 攻击）
+    const mercPower = this.mercenarySystem ? this.mercenarySystem.getTotalPassiveAttack() : 0;
+    // 4) 全局强化攻击档（g_attack 每级 +5% → ×100 基准攻折算）
+    const globalAtkLv = this.globalUpgrades?.getLevel('g_attack') || 0;
+    const globalPower = globalAtkLv * 5;
+    // 5) 面板伤害乘区（升级卡/品质技能加成等聚合）折算
+    const stats = this.getResolvedStats();
+    const dmgMultPower = Math.round((stats.damage - 1) * 100);
+    return Math.max(0, Math.round(equipmentPower + gemPower + mercPower + globalPower + dmgMultPower));
+  }
+
+  /** 加成来源明细（战斗页 📊 面板数据源）：分来源列出各 stat 的加成 */
+  getBonusBreakdown() {
+    const mods = [
+      ...this.equipmentManager.getAllModifiers(),
+      ...(this.forgeSystem ? this.forgeSystem.getEquippedModifiers(this.equippedMap || {}) : []),
+      ...(this.player.pendingStatMods || []),
+      ...(this.globalUpgrades ? this.globalUpgrades.getAllModifiers() : []),
+    ];
+    if (this.mercenarySystem) {
+      const mercAtk = this.mercenarySystem.getTotalPassiveAttack();
+      if (mercAtk > 0) {
+        mods.push({ id: 'merc_passive_atk', source: 'mercenary', stat: 'damage', type: 'add', value: mercAtk / 10 });
+      }
+    }
+    if (this.gemSystem) {
+      const { mods: gemMods } = this.gemSystem.getAllModifiers();
+      mods.push(...gemMods);
+    }
+    // 按来源分组
+    const SOURCE_NAMES = {
+      equipment: '装备', quality: '品质加成', reroll: '洗练', gem: '宝石', gem_set: '宝石套装',
+      mercenary: '佣兵被动', vip: 'VIP', upgrade: '升级卡', global: '全局强化',
+    };
+    const bySource = {};
+    for (const m of mods) {
+      const src = SOURCE_NAMES[m.source] || m.source;
+      (bySource[src] = bySource[src] || []).push(m);
+    }
+    const stats = this.getResolvedStats();
+    const lines = [];
+    lines.push(`⚡ 战力 ${this.getTotalPower()}（原版语义：全部养成折算总攻击）`);
+    lines.push(`最终伤害倍率 ×${stats.damage.toFixed(2)}`);
+    for (const [src, list] of Object.entries(bySource)) {
+      const parts = list.map(m => {
+        const v = m.pct || m.type === 'mul_pct' ? `${(m.value * 100).toFixed(0)}%` : `+${m.value}`;
+        return `${m.stat}:${v}`;
+      });
+      lines.push(`  ${src} → ${parts.join(', ')}`);
+    }
+    lines.push(`攻速 ×${stats.attackSpeed.toFixed(2)}（${Math.round(400 / stats.attackSpeed)}ms/发）`);
+    lines.push(`暴击 ${(stats.critRate * 100).toFixed(0)}% / 暴伤 ×${stats.critDamage.toFixed(2)}`);
+    lines.push(`金币 ×${stats.goldBonus.toFixed(2)}  经验 ×${this.getXpMultiplier().toFixed(2)}`);
+    const gunMult = (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1);
+    if (gunMult > 1) lines.push(`枪械乘区 ×${gunMult.toFixed(2)}`);
+    return lines;
   }
 
   /** Drain pending events for UI consumption. */
@@ -836,14 +996,18 @@ export class GameState {
     return drained;
   }
 
-  /** 生成关卡 BOSS（取 bossConfig 第一个；难度乘数用当前波次） */
+  /** 生成关卡 BOSS（按 levels.bossId 匹配 boss.json；默认第一个） */
   _spawnBoss() {
-    const cfg = this.bossConfig?.[0];
+    const cfgId = this.levelRuntime?.bossId;
+    const cfg = this.bossConfig?.find(b => b.id === cfgId) || this.bossConfig?.[0];
     if (!cfg) return;
     const diffMult = 1 + (this.waveManager.currentWave - 1) * this.balance.difficultyScalePerWave;
     const boss = new Enemy({
       id: cfg.id, name: cfg.name, hp: cfg.hp, speed: cfg.speed, armor: cfg.armor,
       bounty: cfg.bounty || 0, isBoss: true, bossSkills: cfg.skills,
+      resist: cfg.resist, weak: cfg.weak, immuneKnock: !!cfg.immuneKnock,
+      resistFreeze: !!cfg.resistFreeze, elementImmune: !!cfg.elementImmune,
+      freezeHeal: !!cfg.freezeHeal, healOnHurt: !!cfg.healOnHurt,
     }, 3.5, 0, diffMult, this.rng);
     boss.wallDamageOverride = cfg.wallDamage || 10;
     boss.bossReward = cfg.reward || { gold: 500, diamond: 50 };

@@ -1,23 +1,46 @@
 /**
- * VipSystem: VIP 等级与特权（Meta 层）。
- * vipExp 1:1 对应累计充值（×100 语义，与服务端 VIP_LEVELS 一致）。
- * 特权（当前）：金币加成 goldBonus → Modifier 管线（source: vip，受封顶 §13.4）。
+ * VipSystem: VIP 等级与特权（Meta 层，v7.10 原版对齐）。
+ * - 累充门槛：6/30/60/120/200/300/600/1200/2000/4000/6000/12000/20000/28000/40000 元（共 15 档）
+ * - 原版 VIP 是**功能性特权**（次数/栏位/扫荡/佣兵加速），不给数值加成——数值膨胀靠宝石/装备
+ * - VIP12 开放「尊爵特权」
  * 纯逻辑；等级信息由服务端 /api/recharge/vip/info 提供，客户端缓存。
  */
 export const VIP_LEVELS = [
-  { level: 0, requiredExp: 0, goldBonus: 0 },
-  { level: 1, requiredExp: 600, goldBonus: 0.1 },
-  { level: 2, requiredExp: 3000, goldBonus: 0.2 },
-  { level: 3, requiredExp: 9800, goldBonus: 0.3 },
-  { level: 4, requiredExp: 19800, goldBonus: 0.4 },
-  { level: 5, requiredExp: 32800, goldBonus: 0.5 },
-  { level: 6, requiredExp: 64800, goldBonus: 0.6 },
+  { level: 0, requiredYuan: 0, perks: [] },
+  { level: 1, requiredYuan: 6, perks: ['fastBattle+1'] },
+  { level: 2, requiredYuan: 30, perks: ['fastBattle+1', 'bossChallengeBuy'] },
+  { level: 3, requiredYuan: 60, perks: ['goldBuyPlus'] },
+  { level: 4, requiredYuan: 120, perks: ['goldBuyPlus', 'premiumShop'] },
+  { level: 5, requiredYuan: 200, perks: ['mercSpeedUp'] },
+  { level: 6, requiredYuan: 300, perks: ['mercSpeedUp', 'bossChest'] },
+  { level: 7, requiredYuan: 600, perks: ['sweepUnlock'] },
+  { level: 8, requiredYuan: 1200, perks: ['sweepUnlock', 'fastBattlePlus'] },
+  { level: 9, requiredYuan: 2000, perks: [] },
+  { level: 10, requiredYuan: 4000, perks: [] },
+  { level: 11, requiredYuan: 6000, perks: [] },
+  { level: 12, requiredYuan: 12000, perks: ['premiumPass'] }, // 尊爵特权
+  { level: 13, requiredYuan: 20000, perks: [] },
+  { level: 14, requiredYuan: 28000, perks: [] },
+  { level: 15, requiredYuan: 40000, perks: [] },
 ];
+
+/** 特权中文名（UI 显示） */
+export const PERK_NAMES = {
+  'fastBattle+1': '快速战斗次数+1',
+  fastBattlePlus: '快速战斗次数大幅增加',
+  bossChallengeBuy: '购买 BOSS 挑战次数',
+  goldBuyPlus: '购买金币次数增加',
+  premiumShop: '高级商品栏位解锁',
+  mercSpeedUp: '佣兵培养加速',
+  bossChest: '击败 BOSS 额外发现宝箱',
+  sweepUnlock: '扫荡功能解锁',
+  premiumPass: '尊爵特权',
+};
 
 export class VipSystem {
   constructor(cachedInfo = null) {
-    // { vipLevel, vipExp, goldBonus } — 来自服务端；无网/未充值时为 0 级
-    this.info = cachedInfo || { vipLevel: 0, vipExp: 0, goldBonus: 0 };
+    // { vipLevel, vipExp } — vipExp = 累计充值元；无网/未充值时为 0 级
+    this.info = cachedInfo || { vipLevel: 0, vipExp: 0 };
   }
 
   setInfo(info) {
@@ -25,23 +48,21 @@ export class VipSystem {
   }
 
   get level() { return this.info.vipLevel || 0; }
-  get goldBonus() { return this.info.goldBonus || 0; }
 
-  /** 距下一级还需多少 vipExp；满级返回 null */
-  get nextLevelExp() {
-    const next = VIP_LEVELS.find(l => l.level === this.level + 1);
-    return next ? next.requiredExp : null;
+  /** 当前等级的特权列表 */
+  get perks() {
+    const lv = VIP_LEVELS.find(l => l.level === this.level);
+    return lv?.perks || [];
   }
 
-  /** 管线 modifiers */
-  getAllModifiers() {
-    if (this.goldBonus <= 0) return [];
-    return [{
-      id: 'vip_gold_bonus',
-      source: 'vip',
-      stat: 'goldBonus',
-      type: 'mul_pct',
-      value: this.goldBonus,
-    }];
+  /** 距下一级还需多少元；满级返回 null */
+  get nextLevelYuan() {
+    const next = VIP_LEVELS.find(l => l.level === this.level + 1);
+    return next ? next.requiredYuan : null;
+  }
+
+  /** 特权中文名列表（UI） */
+  getPerkNames() {
+    return this.perks.map(p => PERK_NAMES[p] || p);
   }
 }

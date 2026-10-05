@@ -12,7 +12,7 @@ import bossData from './boss.json';
  */
 
 /** 引擎已实现、可派发的敌人行为处理器名单（新增行为处理器后在此登记） */
-const REGISTERED_ENEMY_BEHAVIORS = ['fly', 'split', 'explode', 'dash', 'heal_aura', 'enrage', 'burrow'];
+const REGISTERED_ENEMY_BEHAVIORS = ['fly', 'split', 'explode', 'dash', 'heal_aura', 'enrage', 'burrow', 'revive3', 'bandage_heal', 'vampire'];
 
 let cached = null;
 
