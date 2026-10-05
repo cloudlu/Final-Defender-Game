@@ -10,6 +10,8 @@ import { GemSystem } from '../engine/GemSystem.js';
 import { DailyRewardSystem } from '../engine/DailyRewardSystem.js';
 import { VipSystem } from '../engine/VipSystem.js';
 import { VipClient } from '../repository/VipClient.js';
+import { AuthClient } from '../repository/AuthClient.js';
+import { AuthPanel } from '../ui/AuthPanel.js';
 import { GachaPanel } from '../ui/GachaPanel.js';
 import { ForgePanel } from '../ui/ForgePanel.js';
 import { TavernPanel } from '../ui/TavernPanel.js';
@@ -30,6 +32,21 @@ export class MenuScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const cx = width / 2;
     const cfg = loadGameConfigs();
+
+    // ===== 登录门控（v9.0）：未登录显示登录/注册面板，登录后按用户槽位加载存档 =====
+    const session = AuthClient.getSession();
+    if (!session?.username) {
+      this.authPanel = new AuthPanel(this, {
+        onAuthed: (username, slot) => {
+          this.playerId = username;
+          this.playerSlot = slot;
+          this.create(); // 登录成功重建场景（此后 session 有值，走正常流程）
+        },
+      });
+      return; // 未登录不渲染主菜单
+    }
+    this.playerId = session.username;
+    this.playerSlot = session.slot || 1;
 
     // 菜单背景：复用战场背景图（有夜空/城市剪影/月亮），加深色遮罩保证文字可读
     if (!this.textures.exists('battle_bg')) {
@@ -77,7 +94,7 @@ export class MenuScene extends Phaser.Scene {
     this.gachaSystem = new GachaSystem(cfg.equipment, globalSave, undefined, this.forgeSystem, this.mercenarySystem, this.gemSystem);
     this.dailySystem = new DailyRewardSystem(cfg.balance, globalSave.daily);
     this.vipSystem = new VipSystem(globalSave.vip);
-    this.vipClient = new VipClient();
+    this.vipClient = new VipClient(this.playerId); // 按账号隔离 VIP 档案
     // 远端 VIP 信息异步刷新（服务端不可达则静默保留缓存）
     this.vipClient.getVipInfo().then(info => {
       if (info) {
@@ -89,7 +106,7 @@ export class MenuScene extends Phaser.Scene {
     // 远端存档同步（更新者胜：按保存时间戳决胜，而非单字段对比——
     // 旧策略"远端 gold 更大就覆盖"会把抽卡/兑换后的本地进度回滚：花钱不减 gold，比较失真）
     this.saveRepo = new SyncedSaveRepository();
-    this.saveRepo.load(1).then(remote => {
+    this.saveRepo.load(this.playerSlot || 1).then(remote => {
       if (!remote?.global) return;
       const localTs = Date.parse(localStorage.getItem('lastline_globalsave_ts') || '') || 0;
       const remoteTs = Date.parse(remote.timestamp || '') || 0;
@@ -100,7 +117,7 @@ export class MenuScene extends Phaser.Scene {
         this.scene.restart();
       } else if (remoteTs > 0 && localTs > 0) {
         // 本地更新或无时间差 → 反向推送本地覆盖远端（消除陈旧快照）
-        this.saveRepo.save(1, { global: globalSave, version: 2 });
+        this.saveRepo.save(this.playerSlot || 1, { global: globalSave, version: 2 });
       }
     });
 
@@ -294,7 +311,7 @@ export class MenuScene extends Phaser.Scene {
       const save = { global: this.globalUpgrades.save, version: 2 };
       localStorage.setItem('lastline_globalsave', JSON.stringify(this.globalUpgrades.save));
       localStorage.setItem('lastline_globalsave_ts', new Date().toISOString());
-      this.saveRepo.save(1, save); // 双写：本地缓存 + 远端（远端失败静默，本地保底）
+      this.saveRepo.save(this.playerSlot || 1, save); // 双写：本地缓存 + 远端（远端失败静默，本地保底）
     } catch { /* ignore */ }
   }
 
@@ -566,6 +583,8 @@ export class MenuScene extends Phaser.Scene {
       card.on('pointerdown', () => {
         this.registry.set('selectedLevel', lv.id);
         this.registry.set('eliteMode', this.eliteMode);
+        this.registry.set('playerSlot', this.playerSlot || 1);
+        this.registry.set('playerId', this.playerId || 'player1');
         this.scene.start('GameScene');
       });
     }

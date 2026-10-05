@@ -1,0 +1,17 @@
+{
+  "nextId": 3,
+  "users": {
+    "liangliang": {
+      "id": "u1",
+      "salt": "49781d896359d2cd",
+      "passwordHash": "c6cc89c91b297a88b78abc065b450d1c0ade164beb7574ee2ce1d4f44eed631c",
+      "createdAt": "2026-10-05T15:49:20.891Z"
+    },
+    "tester1": {
+      "id": "u2",
+      "salt": "16af816ceb14c426",
+      "passwordHash": "b9cc989501aaad793af9286152f49e256d446b59dd5dd25fa350c8cb9d4bb81b",
+      "createdAt": "2026-10-05T15:49:20.963Z"
+    }
+  }
+}

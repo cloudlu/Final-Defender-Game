@@ -70,7 +70,7 @@ export class GameScene extends Phaser.Scene {
     // 远端存档双写（权威源=远端；战斗内结算/BOSS 奖励等即时推送）
     this._remoteSave = (global) => {
       this._saveRepo = this._saveRepo || new SyncedSaveRepository();
-      this._saveRepo.save(1, { global, version: 2 });
+      this._saveRepo.save(this.registry.get('playerSlot') || 1, { global, version: 2 });
     };
     this.bossHpBar = new BossHpBar(this);
 

@@ -808,11 +808,56 @@ export class ForgePanel {
       return;
     }
 
+    // ===== 词条筛选行（v8.27：几十颗宝石时按词条快速过滤，解决 20 多页翻找）=====
+    const filterY = currentGem ? gY + 88 : gY + 56;
+    const affixOptions = [...new Set(bag.map(u => this.gems.save.collection[u].affixId))];
+    const curFilter = this._gemFilter ?? null; // null=全部
+    const mkFilterChip = (x, w, label, active, onClick) => {
+      const c = this.scene.add.rectangle(x, filterY, w, 22, active ? 0x4466aa : 0x1c2836)
+        .setInteractive({ useHandCursor: true });
+      c.setStrokeStyle(1, active ? 0x88bbff : 0x334455);
+      this.popupContainer.add(c);
+      this.popupContainer.add(this.scene.add.text(x, filterY, label, {
+        fontSize: '9.5px', fill: active ? '#ffffff' : '#778899', fontFamily: 'Arial',
+      }).setOrigin(0.5));
+      c.on('pointerdown', onClick);
+    };
+    // 全部 chip + 词条 chips（横向排，超宽换行到第二行）
+    {
+      const chips = [{ id: null, label: '全部' }, ...affixOptions.map(id => ({
+        id,
+        label: (this.gems.getAffix(id)?.name || id).slice(0, 4),
+      }))];
+      let fx = px - 228;
+      let row = 0;
+      for (const chip of chips) {
+        const w = chip.label.length * 10 + 20;
+        if (fx + w > px + 228) { fx = px - 228; row++; }
+        if (row >= 2) break; // 最多两行，更多词条用翻页
+        mkFilterChip(fx + w / 2, w, chip.label, curFilter === chip.id, () => {
+          this._gemFilter = chip.id;
+          this._gemPickerPage = 1;
+          this.refresh();
+        });
+        fx += w + 6;
+      }
+    }
+    const filterRows = row + 1;
+    const listTopBase = filterY + 14 + filterRows * 26;
+
+    const filtered = curFilter ? bag.filter(u => this.gems.save.collection[u].affixId === curFilter) : bag;
     const PER = 4;
-    const totalPages = Math.max(1, Math.ceil(bag.length / PER));
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PER));
     this._gemPickerPage = Math.max(1, Math.min(this._gemPickerPage || 1, totalPages));
-    const pageGems = bag.slice((this._gemPickerPage - 1) * PER, this._gemPickerPage * PER);
-    const listTop = currentGem ? gY + 88 : gY + 50; // 有对比卡+提示条时列表下移
+    const pageGems = filtered.slice((this._gemPickerPage - 1) * PER, this._gemPickerPage * PER);
+    const listTop = listTopBase; // 筛选行下方起列表
+
+    if (filtered.length === 0) {
+      this.popupContainer.add(this.scene.add.text(px, listTop + 60, '该词条下没有背包宝石——切换其他筛选', {
+        fontSize: '11px', fill: '#667788', fontFamily: 'Arial',
+      }).setOrigin(0.5));
+      return;
+    }
 
     pageGems.forEach((uid, i) => {
       const gem = this.gems.save.collection[uid];

@@ -23,5 +23,6 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+window.game = game; // 调试用：控制台可访问游戏实例（排查布局用）
 
 window.addEventListener('resize', () => game.scale.refresh());

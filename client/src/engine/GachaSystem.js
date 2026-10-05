@@ -56,6 +56,8 @@ export class GachaSystem {
     const cost = this.getCost(poolId, count);
     const balance = balances[pool.currency] || 0;
     if (balance < cost) return null;
+    // 扣费（v8.27 修复：只校验不扣费=钻石抽卡白嫖；引擎侧一体完成，调用方无需重复实现）
+    balances[pool.currency] = balance - cost;
 
     const results = [];
     let pity = this.save.pity[poolId] || 0;

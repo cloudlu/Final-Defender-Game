@@ -27,19 +27,21 @@ describe('GachaSystem', () => {
     expect(g.pull('gold', 1, { gold: 999 }, new SeededRNG(1))).toBeNull();
   });
 
-  it('pull deducts nothing itself; new items recorded; dupes refund gold', () => {
+  it('pull deducts cost itself (v8.27); new items recorded; dupes refund gold', () => {
     const g = new GachaSystem(equipmentData, freshSave());
     const balances = { gold: 100000 };
-    // 白色 item 池只有 3 件（各 weight 50），seed 固定下第一件必为白
     const r = g.pull('gold', 10, balances, new SeededRNG(7));
     expect(r).not.toBeNull();
     expect(r.results.length).toBe(10);
-    const owned = g.save.ownedRefIds.length;
+    // 十连扣 9000（9 折），重复返还照加
     const dupes = r.results.filter(x => !x.isNew);
-    expect(g.save.ownedRefIds.length).toBe(owned); // owned 已在 pull 中维护
-    // 重复返还的金币已加回 balances
     const refunded = dupes.reduce((a, x) => a + x.refund, 0);
-    if (refunded > 0) expect(balances.gold).toBe(100000 + refunded);
+    expect(balances.gold).toBe(100000 - 9000 + refunded);
+  });
+
+  it('pull rejects when balance < cost', () => {
+    const g = new GachaSystem(equipmentData, freshSave());
+    expect(g.pull('diamond', 1, { diamond: 99 }, new SeededRNG(1))).toBeNull();
   });
 
   it('pity forces purple at threshold when unlucky', () => {
