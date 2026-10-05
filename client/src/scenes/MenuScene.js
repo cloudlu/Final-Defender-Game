@@ -55,7 +55,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.image(0, 0, 'battle_bg').setOrigin(0, 0);
     this.add.rectangle(cx, height / 2, width, height, 0x0a0a18, 0.62);
 
-    // 读取本地关卡进度
+    // 读取本地关卡进度（v9.1：仅作远端未到达时的首屏兜底，权威源=远端）
     let save = null;
     try {
       const raw = localStorage.getItem(LEVEL_SAVE_KEY);
@@ -64,7 +64,7 @@ export class MenuScene extends Phaser.Scene {
     this.levelManager = new LevelManager(cfg.levelsConfig, save);
     this.eliteMode = false;
 
-    // 全局强化（Meta 层）——存档缺省时先建骨架，再挂子模块引用（保证同一引用持久化）
+    // 全局强化（Meta 层）——首屏先用本地兜底快照，远端到达后覆盖（v9.1）
     let globalSave = null;
     try {
       const raw = localStorage.getItem('lastline_globalsave');
