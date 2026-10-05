@@ -942,8 +942,18 @@ export class GameState {
     return Math.max(0, Math.round(equipmentPower + gemPower + mercPower + globalPower + dmgMultPower));
   }
 
-  /** 加成来源明细（战斗页 📊 面板数据源）：分来源列出各 stat 的加成 */
+  /** 加成来源明细（📊 先锋官面板数据源）：结构化对象（UI 层负责玩家语言渲染）。
+   *  stats 实时值 + bySource 分来源汇总（stat 中文名+数值），不再输出 stat 英文字段名 */
   getBonusBreakdown() {
+    const STAT_CN = {
+      damage: '伤害', attackSpeed: '攻速', critRate: '暴击率', critDamage: '暴击伤害',
+      goldBonus: '金币', xpBonus: '经验', wallHp: '防线血量', range: '射程', baseAttack: '攻击力',
+      slowPct: '减速', gunDamage: '枪械伤害',
+      element_fire: '火系伤害', element_ice: '冰系伤害', element_electric: '电系伤害',
+      element_wind: '风系伤害', element_physical: '物理系伤害', element_energy: '能量系伤害',
+      debuffTargetDamage: '对负面怪伤害', highHpTargetDamage: '对高血怪伤害',
+      lowHpWallDamage: '残墙增伤', explodeDamage: '爆炸伤害', eliteDamage: '对精英增伤',
+    };
     const mods = [
       ...this.equipmentManager.getAllModifiers(),
       ...(this.forgeSystem ? this.forgeSystem.getEquippedModifiers(this.equippedMap || {}) : []),
@@ -960,33 +970,40 @@ export class GameState {
       const { mods: gemMods } = this.gemSystem.getAllModifiers();
       mods.push(...gemMods);
     }
-    // 按来源分组
     const SOURCE_NAMES = {
       equipment: '装备', quality: '品质加成', reroll: '洗练', gem: '宝石', gem_set: '宝石套装',
       mercenary: '佣兵被动', vip: 'VIP', upgrade: '升级卡', global: '全局强化',
     };
+    const stats = this.getResolvedStats();
+    // 分来源汇总：同来源同 stat 合并（百分比相加、扁平相加）
     const bySource = {};
     for (const m of mods) {
       const src = SOURCE_NAMES[m.source] || m.source;
-      (bySource[src] = bySource[src] || []).push(m);
+      const key = `${src}|${m.stat}`;
+      const e = bySource[key] = bySource[key] || { source: src, stat: m.stat, pct: 0, flat: 0 };
+      if (m.type === 'mul_pct' || m.pct) e.pct += m.value * 100;
+      else e.flat += m.value;
     }
-    const stats = this.getResolvedStats();
-    const lines = [];
-    lines.push(`⚡ 战力 ${this.getTotalPower()}（原版语义：全部养成折算总攻击）`);
-    lines.push(`最终伤害倍率 ×${stats.damage.toFixed(2)}`);
-    for (const [src, list] of Object.entries(bySource)) {
-      const parts = list.map(m => {
-        const v = m.pct || m.type === 'mul_pct' ? `${(m.value * 100).toFixed(0)}%` : `+${m.value}`;
-        return `${m.stat}:${v}`;
-      });
-      lines.push(`  ${src} → ${parts.join(', ')}`);
-    }
-    lines.push(`攻速 ×${stats.attackSpeed.toFixed(2)}（${Math.round(400 / stats.attackSpeed)}ms/发）`);
-    lines.push(`暴击 ${(stats.critRate * 100).toFixed(0)}% / 暴伤 ×${stats.critDamage.toFixed(2)}`);
-    lines.push(`金币 ×${stats.goldBonus.toFixed(2)}  经验 ×${this.getXpMultiplier().toFixed(2)}`);
-    const gunMult = (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1);
-    if (gunMult > 1) lines.push(`枪械乘区 ×${gunMult.toFixed(2)}`);
-    return lines;
+    const sources = Object.values(bySource)
+      .filter(e => Math.abs(e.pct) > 0.01 || Math.abs(e.flat) > 0.01)
+      .map(e => ({
+        source: e.source,
+        text: `${STAT_CN[e.stat] || e.stat} ${e.pct !== 0 ? `${e.pct > 0 ? '+' : ''}${Math.round(e.pct * 10) / 10}%` : ''}${e.pct !== 0 && e.flat !== 0 ? ' ' : ''}${e.flat !== 0 ? `+${Math.round(e.flat * 10) / 10}` : ''}`,
+      }));
+    return {
+      power: this.getTotalPower(),
+      stats: {
+        damageMult: stats.damage,
+        attackSpeed: stats.attackSpeed,
+        msPerShot: Math.round(400 / stats.attackSpeed),
+        critRate: stats.critRate,
+        critDamage: stats.critDamage,
+        goldBonus: stats.goldBonus,
+        xpBonus: this.getXpMultiplier(),
+        gunMult: (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1),
+      },
+      sources,
+    };
   }
 
   /** Drain pending events for UI consumption. */

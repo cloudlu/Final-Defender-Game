@@ -1,5 +1,8 @@
 import { gridToPixel } from '../engine/GridConstants.js';
 
+/** 敌人全局视觉缩放（v8.21 玩家反馈偏小；碰撞判定用格坐标不受影响） */
+export const ENEMY_SCALE = 1.35;
+
 export const ENEMY_DEFS = {
   enemy_basic:     { kind: 'basic',   color: 0x66aa44, outline: 0x336622, emoji: '🧟', size: 13 },
   enemy_runner:    { kind: 'runner',  color: 0xff8844, outline: 0xaa5500, emoji: '💨', size: 10 },
@@ -80,6 +83,7 @@ export class EnemyRenderer {
     const pos = gridToPixel(enemy.col, enemy.row);
     const def = ENEMY_DEFS[enemy.configId] || ENEMY_DEFS.enemy_basic;
     const c = this.scene.add.container(pos.x, pos.y).setDepth(60);
+    c.setScale(ENEMY_SCALE); // v8.21：全局放大（玩家反馈敌人太小）
 
     const isFlyer = enemy.behavior?.type === 'fly';
     if (!isFlyer) {

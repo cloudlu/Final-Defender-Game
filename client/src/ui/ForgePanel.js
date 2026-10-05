@@ -79,7 +79,7 @@ export class ForgePanel {
     this.container.add(this.bg);
     this.bg.on('pointerdown', () => {
       // 弹窗开→关弹窗；主页→关面板
-      if (this.activeSlot) { this.activeSlot = null; this.selectedUid = null; this.refresh(); }
+      if (this.activeSlot) { this.activeSlot = null; this.selectedUid = null; this._selectedSocketIdx = null; this.refresh(); }
       else { this.destroy(); this.onClose?.(); }
     });
 
@@ -91,6 +91,29 @@ export class ForgePanel {
       fontSize: '13px', fill: '#ffd700', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.resText);
+
+    // ===== 快捷操作行（v8.23：一键合成×2 + 一键穿戴；y=96 在资源行与部位卡之间）=====
+    const mkQuick = (idx, label, color, onClick) => {
+      // 三按钮等宽 164，间距 12：总宽 3×164+2×12=516 ≤ 540
+      const x = cx - (3 * 164 + 2 * 12) / 2 + 164 / 2 + idx * (164 + 12);
+      const b = this.scene.add.rectangle(x, 96, 164, 28, color).setInteractive({ useHandCursor: true });
+      this.container.add(b);
+      this.container.add(this.scene.add.text(x, 96, label, {
+        fontSize: '11px', fill: '#fff', fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0.5));
+      b.on('pointerdown', onClick);
+    };
+    mkQuick(0, '⚗️ 一键合成装备', 0x7755aa, () => this._combineAllEquipment());
+    mkQuick(1, '💎 一键合成宝石', 0x5566aa, () => {
+      // 打开任意部位弹窗的宝石合成页（部位无关，合成是全局的）
+      this.activeSlot = 'weapon';
+      this.selectedUid = this.save.equipped.weapon ?? null;
+      this._gemPickerOpen = true;
+      this._gemPickerTab = 'combine';
+      this._gemPickerSlotIdx = 0;
+      this.refresh();
+    });
+    mkQuick(2, '⬆️ 一键穿戴最强', 0x228866, () => this._equipBestAll());
 
     this.pageContainer = this.scene.add.container(0, 0);
     this.container.add(this.pageContainer);
@@ -124,7 +147,7 @@ export class ForgePanel {
     const cardW = 240, cardH = 170;
     const colGap = 16, rowGap = 12;
     const startX = cx - (cardW * 2 + colGap) / 2 + cardW / 2;
-    const startY = 108 + cardH / 2;
+    const startY = 116 + cardH / 2; // 快捷按钮行（y=96）下方留 6px
 
     SLOTS.forEach((slot, i) => {
       const col = i % 2, row = Math.floor(i / 2);
@@ -208,7 +231,7 @@ export class ForgePanel {
       // 整卡热区
       const zone = this.scene.add.rectangle(x, y, cardW, cardH, 0xffffff, 0).setInteractive({ useHandCursor: true });
       this.pageContainer.add(zone);
-      zone.on('pointerdown', () => { this.activeSlot = slot; this.selectedUid = uid ?? null; this.refresh(); });
+      zone.on('pointerdown', () => { this.activeSlot = slot; this.selectedUid = uid ?? null; this._selectedSocketIdx = null; this.refresh(); });
     });
   }
 
@@ -239,7 +262,7 @@ export class ForgePanel {
     const closeBtn = this.scene.add.text(px + pw / 2 - 20, py - ph / 2 + 22, '✕', {
       fontSize: '16px', fill: '#88aacc', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    closeBtn.on('pointerdown', () => { this.activeSlot = null; this.selectedUid = null; this._gemPickerOpen = false; this.refresh(); });
+    closeBtn.on('pointerdown', () => { this.activeSlot = null; this.selectedUid = null; this._gemPickerOpen = false; this._selectedSocketIdx = null; this.refresh(); });
     this.popupContainer.add(closeBtn);
 
     // ===== 宝石选择器模式：覆盖装备列表区，展示全部背包宝石可翻页选择 =====
@@ -248,19 +271,21 @@ export class ForgePanel {
       return;
     }
 
-    // ===== 宝石孔（弹窗顶部：与部位对齐的视觉）=====
+    // ===== 宝石孔（弹窗顶部：与部位对齐的视觉；点已镶孔=选中，再点"拆下"才取下）=====
     if (this.gems) {
       this.popupContainer.add(this.scene.add.text(px - pw / 2 + 16, py - ph / 2 + 52, '宝石孔（换装备自动保留）', {
         fontSize: '11px', fill: '#88aacc', fontFamily: 'Arial',
       }).setOrigin(0, 0.5));
       const arr = this.gems.save.sockets[slot] || [null, null];
+      const selIdx = this._selectedSocketIdx; // 当前选中的孔（null=无）
       for (let i = 0; i < 2; i++) {
         const hx = px - pw / 2 + 46 + i * 66;
         const uid = arr[i];
         const gem = uid ? this.gems.save.collection[uid] : null;
+        const isSel = selIdx === i && !!uid;
         const hole = this.scene.add.circle(hx, py - ph / 2 + 92, 22, uid ? 0x1e2a40 : 0x14181f)
           .setInteractive({ useHandCursor: true });
-        hole.setStrokeStyle(2, uid ? 0x66aaff : 0x334455);
+        hole.setStrokeStyle(2, isSel ? 0xffffff : (uid ? 0x66aaff : 0x334455));
         this.popupContainer.add(hole);
         if (gem) {
           const affix = this.gems.getAffix(gem.affixId);
@@ -269,7 +294,7 @@ export class ForgePanel {
           this.popupContainer.add(this.scene.add.text(hx, py - ph / 2 + 86, (affix?.name || '').slice(0, 5), {
             fontSize: '8.5px', fill: qc, fontFamily: 'Arial', align: 'center',
           }).setOrigin(0.5));
-          this.popupContainer.add(this.scene.add.text(hx, py - ph / 2 + 102, `+${affix?.pct ? v + '%' : v}`, {
+          this.popupContainer.add(this.scene.add.text(hx, py - ph / 2 + 102, `+${affix?.pct ? Math.round(v * 100) / 100 + '%' : v}`, {
             fontSize: '8.5px', fill: '#aabbcc', fontFamily: 'Arial',
           }).setOrigin(0.5));
         } else {
@@ -279,23 +304,60 @@ export class ForgePanel {
         }
         hole.on('pointerdown', () => {
           if (uid) {
-            const affix = this.gems.getAffix(gem.affixId);
-            this.gems.unequip(slot, i);
-            this.onPersist?.();
-            this._toast(`💎 已拆下${affix?.name || ''}`, '#88ddff');
+            // 已镶：第一次点=选中（白框+展开操作），再点同一孔=拆下
+            if (isSel) {
+              const affix = this.gems.getAffix(gem.affixId);
+              this.gems.unequip(slot, i);
+              this._selectedSocketIdx = null;
+              this.onPersist?.();
+              this._toast(`💎 已拆下${affix?.name || ''}`, '#88ddff');
+            } else {
+              this._selectedSocketIdx = i;
+            }
             this.refresh();
           } else {
-            // 空孔 → 打开宝石选择器（v8.15：全背包可翻页选择）
+            // 空孔 → 打开宝石选择器
             this._gemPickerOpen = true;
             this._gemPickerSlotIdx = i;
             this.refresh();
           }
         });
       }
-      // 更换/镶嵌宝石入口（孔位右侧）
-      const pickBtn = this.scene.add.text(px - pw / 2 + 190, py - ph / 2 + 92, '🔍 选择宝石 ▸', {
+      // 选中态操作条：显示完整宝石信息 + 拆下按钮（孔位右侧）
+      if (selIdx !== null && selIdx !== undefined && arr[selIdx]) {
+        const sGem = this.gems.save.collection[arr[selIdx]];
+        const sAffix = this.gems.getAffix(sGem.affixId);
+        const sV = this.gems.gemValue(sGem);
+        const infoY = py - ph / 2 + 92;
+        const ig = this.scene.add.graphics();
+        ig.fillStyle(0x14202c, 0.95);
+        ig.fillRoundedRect(px - pw / 2 + 172, infoY - 17, 240, 34, 6);
+        ig.lineStyle(1, 0x446688, 1);
+        ig.strokeRoundedRect(px - pw / 2 + 172, infoY - 17, 240, 34, 6);
+        this.popupContainer.add(ig);
+        this.popupContainer.add(this.scene.add.text(px - pw / 2 + 182, infoY,
+          `【${GEM_Q[sGem.quality]}】${sAffix?.name || ''} +${sAffix?.pct ? Math.round(sV * 100) / 100 + '%' : sV} ⚡${this.gems.gemPower(sGem)}`, {
+          fontSize: '10px', fill: '#ddeeff', fontFamily: 'Arial',
+        }).setOrigin(0, 0.5));
+        const ub = this.scene.add.rectangle(px + pw / 2 - 46, infoY, 66, 24, 0x884444)
+          .setInteractive({ useHandCursor: true });
+        this.popupContainer.add(ub);
+        this.popupContainer.add(this.scene.add.text(px + pw / 2 - 46, infoY, '✕ 拆下', {
+          fontSize: '11px', fill: '#ffccaa', fontFamily: 'Arial', fontStyle: 'bold',
+        }).setOrigin(0.5));
+        ub.on('pointerdown', () => {
+          this.gems.unequip(slot, selIdx);
+          this._selectedSocketIdx = null;
+          this.onPersist?.();
+          this._toast(`💎 已拆下${sAffix?.name || ''}`, '#88ddff');
+          this.refresh();
+        });
+      }
+      // 更换/镶嵌宝石入口（孔位右侧；选中操作条存在时右移避让）
+      const pickBtnX = (selIdx !== null && selIdx !== undefined && arr[selIdx]) ? px + pw / 2 - 20 : px - pw / 2 + 190;
+      const pickBtn = this.scene.add.text(pickBtnX, py - ph / 2 + 130, '🔍 选择宝石 ▸', {
         fontSize: '12px', fill: '#ffdd66', fontFamily: 'Arial', fontStyle: 'bold',
-      }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+      }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
       pickBtn.on('pointerdown', () => {
         this._gemPickerOpen = true;
         const cur = this.gems.save.sockets[slot] || [null, null];
@@ -370,11 +432,12 @@ export class ForgePanel {
       zone.on('pointerdown', () => { this.selectedUid = entry.uid; this.refresh(); });
     });
 
-    // ===== 详情区锚点（自底向上固定推导，翻页条与详情区共享此坐标基准）=====
-    const gBottom = py + ph / 2 - 10;   // 850：chips 底
-    const gemTitleY = gBottom - 46;     // 804：宝石标题
-    const btnY = gemTitleY - 30;        // 774：操作按钮行
-    const dY = btnY - 71;               // 703：词条区顶（词条止于 btnY-23）
+    // ===== 详情区锚点（自底向上固定推导；v8.24 删背包宝石 chips，按钮行贴底）=====
+    // 弹窗底 = py+ph/2 = 860。按钮中心 840（34 高 → 823~857，底留 3px）
+    // 词条 4 行：dY+8 起、行距 20 → 末行 ay=dY+68，底 dY+76 ≤ 按钮顶 823 → dY ≤ 747，取 745
+    const btnY = py + ph / 2 - 20;      // 840
+    const dY = btnY - 95;               // 745
+    const gemTitleY = btnY - 26;        // 兼容旧引用
 
     // 列表分页（y 取"本页卡片末尾 + 24"与"详情区标题 - 30"的较上者，保证既贴列表又不压详情）
     if (totalPages > 1) {
@@ -413,9 +476,9 @@ export class ForgePanel {
       `${QUALITY_NAMES[sel.quality]}·${sel.tier}阶  ⚡${this.score(sel)}  技能伤害+${Math.round((QUALITY_SKILL_BONUS[sel.quality] || 0) * 100)}%`, {
       fontSize: '11.5px', fill: rc.color, fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0, 0.5));
-    // 词条+洗练/锁定（最多显示 3 条，超出折叠——固定区域高度不随词条数漂移）
+    // 词条+洗练/锁定（显示 4 条，超出折叠——固定区域高度不随词条数漂移）
     const tierMult = 1 + 0.1 * ((sel.tier || 1) - 1);
-    const shownAffixes = (sel.affixes || []).slice(0, 3);
+    const shownAffixes = (sel.affixes || []).slice(0, 4);
     shownAffixes.forEach((a, idx) => {
       const ay = dY + 8 + idx * 20;
       const finalVal = a.pct ? a.value : Math.round(a.value * tierMult * 10) / 10;
@@ -450,33 +513,35 @@ export class ForgePanel {
       }).setOrigin(0, 0.5));
     }
 
-    // 操作按钮行（固定锚点）
+    // 操作按钮行（固定锚点；v8.24 五格等宽：换宝石升为与穿戴/强化同级的一等操作）
     const bY1 = btnY;
-    const mkOp = (x, w, label, color, onClick, enabled = true, reason = null) => {
-      const b = this.scene.add.rectangle(x, bY1, w, 34, enabled ? color : 0x333a44)
+    const OP_W = 92, OP_GAP = 4;
+    const opX = (i) => px - (5 * OP_W + 4 * OP_GAP) / 2 + OP_W / 2 + i * (OP_W + OP_GAP);
+    const mkOp = (i, label, color, onClick, enabled = true, reason = null) => {
+      const b = this.scene.add.rectangle(opX(i), bY1, OP_W, 34, enabled ? color : 0x333a44)
         .setInteractive({ useHandCursor: true });
       this.popupContainer.add(b);
-      this.popupContainer.add(this.scene.add.text(x, bY1, label, {
-        fontSize: '11px', fill: enabled ? '#fff' : '#667', fontFamily: 'Arial', fontStyle: 'bold',
+      this.popupContainer.add(this.scene.add.text(opX(i), bY1, label, {
+        fontSize: '10.5px', fill: enabled ? '#fff' : '#667', fontFamily: 'Arial', fontStyle: 'bold',
       }).setOrigin(0.5));
       b.on('pointerdown', () => {
         if (enabled) onClick();
         else this._toast(`⚠ ${reason || '条件不满足'}`, '#ffaa66');
       });
     };
-    // 穿戴
-    mkOp(px - 180, 100, equipped ? '卸下' : '穿戴', equipped ? 0x775522 : 0x2266aa, () => {
+    // 0 穿戴
+    mkOp(0, equipped ? '卸下' : '穿戴', equipped ? 0x775522 : 0x2266aa, () => {
       if (equipped) delete this.save.equipped[slot];
       else this.save.equipped[slot] = sel.uid;
       this.onPersist?.();
       this.refresh();
     }, true);
-    // 部位强化
+    // 1 部位强化
     const cost = this.forge.getForgeCost(slot);
     if (cost?.maxed) {
-      mkOp(px - 60, 100, '强化MAX', 0x3a3a4a, () => this._toast('部位强化已满级', '#ffcc44'), false, '已满级');
+      mkOp(1, '强化MAX', 0x3a3a4a, () => this._toast('部位强化已满级', '#ffcc44'), false, '已满级');
     } else {
-      mkOp(px - 60, 100, `强化 💰${cost.gold}`, this.save.gold >= cost.gold ? 0x009955 : 0x3a3a4a, () => {
+      mkOp(1, `强化 💰${cost.gold}`, this.save.gold >= cost.gold ? 0x009955 : 0x3a3a4a, () => {
         const r = this.forge.forgeSlot(slot, this.save.gold || 0);
         if (r.success) {
           this.save.gold -= r.cost.gold;
@@ -486,9 +551,9 @@ export class ForgePanel {
         }
       }, this.save.gold >= cost.gold, `金币不足（需${cost.gold}）`);
     }
-    // 升品
+    // 2 升品
     const qCost = this.forge.getUpgradeQualityCost(sel.uid);
-    mkOp(px + 60, 100, qCost === null ? '品质MAX' : `⬆品 ⚒️${qCost}`,
+    mkOp(2, qCost === null ? '品质MAX' : `⬆品 ⚒️${qCost}`,
       qCost === null ? 0x3a3a4a : ((this.forge.save.forgeStones || 0) >= qCost ? 0xaa44bb : 0x3a3a4a),
       () => {
         const r = this.forge.upgradeQuality(sel.uid);
@@ -499,9 +564,9 @@ export class ForgePanel {
         }
       }, qCost !== null && (this.forge.save.forgeStones || 0) >= qCost,
       qCost === null ? '已最高品质' : `锻造石不足（需${qCost}）`);
-    // 分解
+    // 3 分解
     const scrapVal = this.forge.getScrapValue(sel.uid);
-    mkOp(px + 180, 100, `分解 +${scrapVal}G`, equipped ? 0x3a3a4a : 0x884444, () => {
+    mkOp(3, `分解+${scrapVal}G`, equipped ? 0x3a3a4a : 0x884444, () => {
       const r = this.forge.scrap(sel.uid);
       this.save.gold = (this.save.gold || 0) + r.gold;
       this.save.forgeStones = (this.save.forgeStones || 0) + r.stones;
@@ -510,56 +575,14 @@ export class ForgePanel {
       this.refresh();
       this._toast(`♻️ +${r.gold}G +⚒️${r.stones}`, '#ffcc88');
     }, !equipped, '穿戴中不能分解');
-
-    // ===== 背包宝石（弹窗底部固定锚点：与按钮行间距 26px，不再重叠）=====
+    // 4 换宝石（背包宝石 chips 已删 v8.24：选择器完整承担，按钮升为常驻操作）
     if (this.gems) {
-      const gY = gemTitleY;
-      const socketed = new Set(this.gems.getSocketed().map(g => g.uid));
-      const bag = Object.keys(this.gems.save.collection).filter(u => !socketed.has(u));
-      bag.sort((a, b) => this.gems.gemPower(this.gems.save.collection[b]) - this.gems.gemPower(this.gems.save.collection[a]));
-      this.popupContainer.add(this.scene.add.text(px - 228, gY, '💎 背包宝石（点击镶入空孔）', {
-        fontSize: '10.5px', fill: '#88aacc', fontFamily: 'Arial',
-      }).setOrigin(0, 0.5));
-      const top = bag.slice(0, 3);
-      top.forEach((uid, i) => {
-        const gem = this.gems.save.collection[uid];
-        const affix = this.gems.getAffix(gem.affixId);
-        const v = this.gems.gemValue(gem);
-        const qc = GEM_QC[gem.quality] || '#fff';
-        const dead = v <= 0;
-        const gx = px - 228 + i * 152;
-        const chip = this.scene.add.rectangle(gx + 74, gY + 24, 148, 34, 0x1a2230, 0.95)
-          .setInteractive({ useHandCursor: true });
-        chip.setStrokeStyle(1, dead ? 0x553333 : 0x334455);
-        this.popupContainer.add(chip);
-        this.popupContainer.add(this.scene.add.text(gx + 6, gY + 16, `【${GEM_Q[gem.quality]}】${(affix?.name || '').slice(0, 7)}`, {
-          fontSize: '9px', fill: dead ? '#775555' : qc, fontFamily: 'Arial',
-        }).setOrigin(0, 0.5));
-        this.popupContainer.add(this.scene.add.text(gx + 6, gY + 30, `+${affix?.pct ? Math.round(v * 100) / 100 + '%' : v}${dead ? ' 废' : ''} ⚡${this.gems.gemPower(gem)}`, {
-          fontSize: '8.5px', fill: dead ? '#664444' : '#99aabb', fontFamily: 'Arial',
-        }).setOrigin(0, 0.5));
-        chip.on('pointerdown', () => {
-          const cur = this.gems.save.sockets[slot] || [null, null];
-          const emptyIdx = cur.findIndex(u => u == null);
-          const idx = emptyIdx >= 0 ? emptyIdx : 0;
-          const replaced = cur[idx];
-          this.gems.equip(slot, idx, uid);
-          this.onPersist?.();
-          const oldName = replaced ? this.gems.getAffix(this.gems.save.collection[replaced]?.affixId)?.name || '' : '';
-          this._toast(`💎 镶嵌成功${replaced ? `（替换${oldName}）` : ''}`, '#88ff88');
-          this.refresh();
-        });
-      });
-      if (bag.length > 3) {
-        this.popupContainer.add(this.scene.add.text(px + 228, gY + 22, `…共${bag.length}`, {
-          fontSize: '9px', fill: '#667788', fontFamily: 'Arial',
-        }).setOrigin(1, 0.5));
-      }
-      if (bag.length === 0) {
-        this.popupContainer.add(this.scene.add.text(px, gY + 22, '背包无宝石——去 🎰 抽卡', {
-          fontSize: '10px', fill: '#667788', fontFamily: 'Arial',
-        }).setOrigin(0.5));
-      }
+      mkOp(4, '🔍 换宝石', 0x2a5566, () => {
+        this._gemPickerOpen = true;
+        const cur = this.gems.save.sockets[slot] || [null, null];
+        this._gemPickerSlotIdx = cur.findIndex(u => u == null) >= 0 ? cur.findIndex(u => u == null) : 0;
+        this.refresh();
+      }, true);
     }
   }
 
@@ -578,13 +601,155 @@ export class ForgePanel {
     const back = this.scene.add.text(px + 228, gY, '✕ 返回', {
       fontSize: '12px', fill: '#88aacc', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-    back.on('pointerdown', () => { this._gemPickerOpen = false; this.refresh(); });
+    back.on('pointerdown', () => { this._gemPickerOpen = false; this._gemPickerTab = 'list'; this.refresh(); });
     this.popupContainer.add(back);
 
     // 背包宝石（未镶嵌），战力降序
     const socketed = new Set(this.gems.getSocketed().map(g => g.uid));
     const bag = Object.keys(this.gems.save.collection).filter(u => !socketed.has(u));
     bag.sort((a, b) => this.gems.gemPower(this.gems.save.collection[b]) - this.gems.gemPower(this.gems.save.collection[a]));
+
+    // ===== 双标签页：镶嵌（默认）/ 合成 =====
+    // 可合成组：同词条同品质 ×3（原版规则）
+    const comboGroups = {};
+    for (const [uid, gem] of Object.entries(this.gems.save.collection)) {
+      if (socketed.has(uid)) continue;
+      const key = `${gem.affixId}_${gem.quality}`;
+      (comboGroups[key] = comboGroups[key] || { affixId: gem.affixId, quality: gem.quality, uids: [] }).uids.push(uid);
+    }
+    const combos = Object.values(comboGroups).filter(g => g.uids.length >= 3);
+
+    const tabY = gY + 26;
+    const mkTab = (x, w, label, active, onClick) => {
+      const t = this.scene.add.text(x, tabY, label, {
+        fontSize: '12.5px', fill: active ? '#ffdd66' : '#667788', fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      if (active) {
+        const ug = this.scene.add.graphics();
+        ug.lineStyle(2, 0xffcc44, 1);
+        ug.lineBetween(x - w / 2, tabY + 11, x + w / 2, tabY + 11);
+        this.popupContainer.add(ug);
+      }
+      t.on('pointerdown', onClick);
+      this.popupContainer.add(t);
+    };
+    mkTab(px - 100, 90, `💎 镶嵌 (${bag.length})`, (this._gemPickerTab || 'list') === 'list', () => { this._gemPickerTab = 'list'; this.refresh(); });
+    mkTab(px + 40, 90, `⚗️ 合成 (${combos.length})`, this._gemPickerTab === 'combine', () => { this._gemPickerTab = 'combine'; this.refresh(); });
+
+    // ===== 合成标签页：可合成组列表 + 一键合成全部 =====
+    if (this._gemPickerTab === 'combine') {
+      if (combos.length === 0) {
+        this.popupContainer.add(this.scene.add.text(px, tabY + 60, [
+          '暂无可合成组', '',
+          '规则（原版）：3 颗同词条同品质 → 1 颗高一档品质',
+          '去 💎 镶嵌页查看全部宝石',
+        ].join('\n'), {
+          fontSize: '11.5px', fill: '#667788', fontFamily: 'Arial', align: 'center', lineSpacing: 4,
+        }).setOrigin(0.5));
+        return;
+      }
+      // 一键合成全部（原版批量合成语义）
+      const allBtn = this.scene.add.rectangle(px + 150, tabY + 6, 156, 30, 0x7755aa)
+        .setInteractive({ useHandCursor: true });
+      this.popupContainer.add(allBtn);
+      this.popupContainer.add(this.scene.add.text(px + 150, tabY + 6, '⚗️ 一键合成全部', {
+        fontSize: '12px', fill: '#fff', fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0.5));
+      allBtn.on('pointerdown', () => {
+        let done = 0, gained = 0;
+        let guard = 0;
+        while (guard < 100) {
+          guard++;
+          const sock = new Set(this.gems.getSocketed().map(g => g.uid));
+          const groups = {};
+          for (const [uid, gem] of Object.entries(this.gems.save.collection)) {
+            if (sock.has(uid)) continue;
+            const key = `${gem.affixId}_${gem.quality}`;
+            (groups[key] = groups[key] || []).push(uid);
+          }
+          const ready = Object.values(groups).find(arr => arr.length >= 3);
+          if (!ready) break;
+          const r = this.gems.combine(ready.slice(0, 3));
+          if (r.success) { done++; gained += this.gems.gemPower(this.gems.save.collection[r.gem.uid]); }
+          else break;
+        }
+        this.onPersist?.();
+        this.refresh();
+        this._toast(`⚗️ 合成 ${done} 组，战力 +${gained}`, '#ffdd44');
+      });
+
+      // 可合成组列表（每页 4 组）
+      const PERC = 4;
+      const cTotal = Math.max(1, Math.ceil(combos.length / PERC));
+      this._comboPage = Math.max(1, Math.min(this._comboPage || 1, cTotal));
+      const pageCombos = combos.slice((this._comboPage - 1) * PERC, this._comboPage * PERC);
+      pageCombos.forEach((cg, i) => {
+        const affix = this.gems.getAffix(cg.affixId);
+        const qc = GEM_QC[cg.quality] || '#fff';
+        const nqc = GEM_QC[cg.quality + 1] || '?';
+        // 战力对比：3 颗现分 vs 1 颗新分
+        const sample = { affixId: cg.affixId, quality: cg.quality };
+        const next = { affixId: cg.affixId, quality: cg.quality + 1 };
+        const curPow = this.gems.gemPower(sample) * 3;
+        const newPow = this.gems.gemPower(next);
+        const y = tabY + 52 + i * 88;
+
+        const g = this.scene.add.graphics();
+        g.fillStyle(0x000000, 0.3);
+        g.fillRoundedRect(px - 226, y - 34 + 2, 452, 72, 10);
+        g.fillStyle(0x1a2230, 0.98);
+        g.fillRoundedRect(px - 228, y - 34, 452, 72, 10);
+        g.lineStyle(2, 0x7755aa, 1);
+        g.strokeRoundedRect(px - 228, y - 34, 452, 72, 10);
+        this.popupContainer.add(g);
+
+        this.popupContainer.add(this.scene.add.text(px - 204, y - 14,
+          `【${qc}】${affix?.name || cg.affixId} ×${cg.uids.length}  →  【${nqc}】`, {
+          fontSize: '13px', fill: qc, fontFamily: 'Arial', fontStyle: 'bold',
+        }).setOrigin(0, 0.5));
+        this.popupContainer.add(this.scene.add.text(px - 204, y + 10,
+          `战力 ${curPow} → ${newPow}（${newPow >= curPow ? '+' : ''}${newPow - curPow}）`, {
+          fontSize: '10.5px', fill: newPow >= curPow ? '#88ff88' : '#ffcc66', fontFamily: 'Arial',
+        }).setOrigin(0, 0.5));
+
+        const cb = this.scene.add.rectangle(px + 190, y, 76, 34, 0x7755aa)
+          .setInteractive({ useHandCursor: true });
+        this.popupContainer.add(cb);
+        this.popupContainer.add(this.scene.add.text(px + 190, y, '⚗️ 合成', {
+          fontSize: '12px', fill: '#fff', fontFamily: 'Arial', fontStyle: 'bold',
+        }).setOrigin(0.5));
+        cb.on('pointerdown', () => {
+          const r = this.gems.combine(cg.uids.slice(0, 3));
+          if (r.success) {
+            this.onPersist?.();
+            this._toast(`💎 合成成功 → ${nqc}【${affix?.name}】，战力 ${curPow}→${newPow}`, '#ffdd44');
+            this.refresh();
+          } else {
+            this._toast(`⚠ 合成失败：${r.reason || '?'}`, '#ffaa66');
+          }
+        });
+      });
+
+      // 合成页翻页
+      if (cTotal > 1) {
+        const pyp = tabY + 52 + PERC * 88 + 4;
+        const mkCBtn = (x, label, enabled, onClick) => {
+          const b = this.scene.add.rectangle(x, pyp, 52, 24, enabled ? 0x334455 : 0x222833)
+            .setInteractive({ useHandCursor: enabled });
+          this.popupContainer.add(b);
+          this.popupContainer.add(this.scene.add.text(x, pyp, label, {
+            fontSize: '13px', fill: enabled ? '#ffdd66' : '#445', fontFamily: 'Arial', fontStyle: 'bold',
+          }).setOrigin(0.5));
+          if (enabled) b.on('pointerdown', onClick);
+        };
+        mkCBtn(px - 70, '◀', this._comboPage > 1, () => { this._comboPage--; this.refresh(); });
+        mkCBtn(px + 70, '▶', this._comboPage < cTotal, () => { this._comboPage++; this.refresh(); });
+        this.popupContainer.add(this.scene.add.text(px, pyp, `${this._comboPage} / ${cTotal}`, {
+          fontSize: '12px', fill: '#aabbcc', fontFamily: 'Arial',
+        }).setOrigin(0.5));
+      }
+      return; // 合成页到此结束
+    }
 
     // 当前孔位已镶宝石（新旧对比基准卡）
     const curArr = this.gems.save.sockets[slot] || [null, null];
@@ -613,6 +778,29 @@ export class ForgePanel {
       }).setOrigin(1, 0.5));
     }
 
+    // ⭐ 最优提示（回答"怎么快速知道是否最优"）：背包第一颗（战力最高）vs 当前已镶
+    if (bag.length > 0) {
+      const best = this.gems.save.collection[bag[0]];
+      const bestPow = this.gems.gemPower(best);
+      const curPow = currentGem ? this.gems.gemPower(currentGem) : 0;
+      const tipY = currentGem ? gY + 62 : gY + 34;
+      if (bestPow > curPow) {
+        const bAffix = this.gems.getAffix(best.affixId);
+        const tip = this.scene.add.text(px, tipY,
+          `⭐ 最优推荐：【${GEM_Q[best.quality]}】${bAffix?.name || ''} ⚡${bestPow}（比当前强 +${bestPow - curPow}，列表第 1 位）`, {
+          fontSize: '11px', fill: '#88ff88', fontFamily: 'Arial', fontStyle: 'bold',
+          backgroundColor: '#000000aa', padding: { x: 8, y: 3 },
+        }).setOrigin(0.5);
+        this.popupContainer.add(tip);
+      } else {
+        const tip = this.scene.add.text(px, tipY, '✓ 已镶宝石就是背包最强，无需更换', {
+          fontSize: '10.5px', fill: '#88aacc', fontFamily: 'Arial',
+          backgroundColor: '#000000aa', padding: { x: 8, y: 3 },
+        }).setOrigin(0.5);
+        this.popupContainer.add(tip);
+      }
+    }
+
     if (bag.length === 0) {
       this.popupContainer.add(this.scene.add.text(px, gY + 120, '背包无宝石——去 🎰 抽卡获取', {
         fontSize: '12px', fill: '#667788', fontFamily: 'Arial',
@@ -624,6 +812,7 @@ export class ForgePanel {
     const totalPages = Math.max(1, Math.ceil(bag.length / PER));
     this._gemPickerPage = Math.max(1, Math.min(this._gemPickerPage || 1, totalPages));
     const pageGems = bag.slice((this._gemPickerPage - 1) * PER, this._gemPickerPage * PER);
+    const listTop = currentGem ? gY + 88 : gY + 50; // 有对比卡+提示条时列表下移
 
     pageGems.forEach((uid, i) => {
       const gem = this.gems.save.collection[uid];
@@ -631,7 +820,7 @@ export class ForgePanel {
       const v = this.gems.gemValue(gem);
       const qc = GEM_QC[gem.quality] || '#fff';
       const dead = v <= 0;
-      const y = gY + 50 + i * 92;
+      const y = listTop + i * 92;
       const power = this.gems.gemPower(gem);
 
       const g = this.scene.add.graphics();
@@ -695,7 +884,7 @@ export class ForgePanel {
 
     // 翻页
     if (totalPages > 1) {
-      const pyp = gY + 50 + PER * 92 + 4;
+      const pyp = listTop + PER * 92;
       const mkBtn = (x, label, enabled, onClick) => {
         const b = this.scene.add.rectangle(x, pyp, 52, 24, enabled ? 0x334455 : 0x222833)
           .setInteractive({ useHandCursor: enabled });
@@ -713,8 +902,65 @@ export class ForgePanel {
     }
   }
 
-  _toast(msg, color = '#88ddff') {
-    this._toastText?.destroy();
+  /** 一键穿戴最强（原版换装心智）：每部位装备池按战力分排序，穿最高件；部位强化自动继承无需顾虑 */
+  _equipBestAll() {
+    const SLOTS = ['weapon', 'helmet', 'coat', 'bracers', 'pants', 'shoes'];
+    let changed = 0;
+    const details = [];
+    for (const slot of SLOTS) {
+      const pool = this.forge.save.inventory.filter(i => i.slot === slot);
+      if (pool.length === 0) continue;
+      pool.sort((a, b) => this.score(b) - this.score(a));
+      const best = pool[0];
+      const curUid = this.save.equipped[slot];
+      if (curUid === best.uid) continue; // 已是最强
+      const cur = curUid != null ? this.forge.save.inventory.find(i => i.uid === curUid) : null;
+      const gain = this.score(best) - (cur ? this.score(cur) : 0);
+      this.save.equipped[slot] = best.uid;
+      changed++;
+      details.push(`${slot.slice(0, 2)}+${gain}`);
+    }
+    if (changed > 0) {
+      this.onPersist?.();
+      this.refresh();
+      this.scene.cameras.main.flash(200, 100, 255, 150);
+      this._toast(`⬆️ 已更新 ${changed} 个部位（${details.join(' ')}）`, '#88ff88');
+    } else {
+      this._toast('✓ 六个部位都已是背包最强，无需更换', '#88ddff');
+    }
+  }
+
+  /** 一键合成装备（原版批量合成语义）：全仓库扫同部位同品质 ×3 组循环合成，穿戴件自动排除 */
+  _combineAllEquipment() {
+    let done = 0;
+    let guard = 0;
+    while (guard < 200) {
+      guard++;
+      const equippedUids = new Set(Object.values(this.save.equipped || {}));
+      const groups = {};
+      for (const it of this.forge.save.inventory) {
+        if (equippedUids.has(it.uid)) continue;
+        const key = `${it.slot}_${it.quality}`;
+        (groups[key] = groups[key] || []).push(it);
+      }
+      const ready = Object.values(groups).find(g => g.length >= 3);
+      if (!ready) break;
+      const r = this.forge.combine([ready[0].uid, ready[1].uid, ready[2].uid]);
+      if (r.success) done++;
+      else break;
+    }
+    if (done > 0) {
+      this.selectedUid = null;
+      this.onPersist?.();
+      this.refresh();
+      this.scene.cameras.main.flash(250, 170, 120, 255);
+      this._toast(`⚗️ 一键合成完成：${done} 组（升品 +${done} 件）`, '#ffdd44');
+    } else {
+      this._toast('⚠ 没有可合成的装备组（需 3 件同部位同品质，穿戴件除外）', '#ffaa66');
+    }
+  }
+
+  _toast(msg, color = '#88ddff') {    this._toastText?.destroy();
     this._toastText = this.scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80, msg, {
       fontSize: '13px', fill: color, fontFamily: 'Arial', fontStyle: 'bold',
       backgroundColor: '#000000dd', padding: { x: 12, y: 6 },

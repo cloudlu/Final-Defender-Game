@@ -312,17 +312,33 @@ export class MenuScene extends Phaser.Scene {
       gemSystem: this.gemSystem,
       vipSystem: this.vipSystem,
     });
-    const lines = lightState.getBonusBreakdown();
-    // 穿戴摘要
+    const breakdown = lightState.getBonusBreakdown(); // 结构化对象 { power, stats, sources }
+    // 穿戴摘要（结构化数组，面板内两列网格渲染）
     const SLOT_N = { weapon: '武器', helmet: '头盔', coat: '衣服', bracers: '护臂', pants: '腰饰', shoes: '鞋子' };
     const QN = { white: '白', green: '绿', blue: '蓝', purple: '紫', orange: '橙', red: '红', rainbow: '彩' };
-    const equippedDesc = ['weapon', 'helmet', 'coat', 'bracers', 'pants', 'shoes'].map(slot => {
+    const QN_COLOR = { white: '#aaaaaa', green: '#66cc66', blue: '#4488ff', purple: '#aa44ff', orange: '#ff8800', red: '#ff4444', rainbow: '#ff44dd' };
+    const AFFIX_CN = {
+      damage: '伤害', attackSpeed: '攻速', critRate: '暴击率', critDamage: '暴击伤害',
+      baseAttack: '攻击力', wallHp: '防线血量', gunDamage: '枪械伤害',
+      element_fire: '火系', element_ice: '冰系', element_electric: '电系',
+      element_wind: '风系', element_physical: '物理系', element_energy: '能量系',
+      debuffTargetDamage: '对负面怪', highHpTargetDamage: '对高血怪', eliteDamage: '对精英',
+      explodeDamage: '爆炸', lowHpWallDamage: '残墙',
+    };
+    const equippedList = ['weapon', 'helmet', 'coat', 'bracers', 'pants', 'shoes'].map(slot => {
       const uid = (this.globalUpgrades.save.equipped || {})[slot];
       const entry = uid != null ? this.forgeSystem.save.inventory.find(i => i.uid === uid) : null;
-      if (!entry) return `${SLOT_N[slot]}:—`;
-      return `${SLOT_N[slot]}:${QN[entry.quality] || '?'}${entry.tier}阶`;
-    }).join('  ');
-    this._vanguardPanel = new VanguardPanel(this, lines, equippedDesc, {
+      if (!entry) return { slot: SLOT_N[slot], empty: true };
+      return {
+        slot: SLOT_N[slot],
+        empty: false,
+        quality: QN[entry.quality] || '?',
+        qColor: QN_COLOR[entry.quality] || '#fff',
+        tier: entry.tier,
+        affixes: (entry.affixes || []).slice(0, 2).map(a => `${AFFIX_CN[a.name] || AFFIX_CN[a.stat] || a.name || a.stat}+${a.pct ? Math.round(a.value * 100) / 100 + '%' : a.value}`),
+      };
+    });
+    this._vanguardPanel = new VanguardPanel(this, breakdown, equippedList, {
       onClose: () => { this._vanguardPanel = null; },
     });
   }
