@@ -12,6 +12,7 @@ import { VipSystem } from '../engine/VipSystem.js';
 import { VipClient } from '../repository/VipClient.js';
 import { AuthClient } from '../repository/AuthClient.js';
 import { AuthPanel } from '../ui/AuthPanel.js';
+import { AccountPanel } from '../ui/AccountPanel.js';
 import { GachaPanel } from '../ui/GachaPanel.js';
 import { ForgePanel } from '../ui/ForgePanel.js';
 import { TavernPanel } from '../ui/TavernPanel.js';
@@ -38,9 +39,10 @@ export class MenuScene extends Phaser.Scene {
     if (!session?.username) {
       this.authPanel = new AuthPanel(this, {
         onAuthed: (username, slot) => {
-          this.playerId = username;
-          this.playerSlot = slot;
-          this.create(); // 登录成功重建场景（此后 session 有值，走正常流程）
+          AuthClient.setSession(username, slot);
+          // v9.3b：走 Phaser 正规生命周期重启（手动调 create() 会在未 shutdown 状态下重入，
+          // 造成元素叠加与后续 restart 状态错乱）
+          this.scene.restart();
         },
       });
       return; // 未登录不渲染主菜单
@@ -55,22 +57,12 @@ export class MenuScene extends Phaser.Scene {
     this.add.image(0, 0, 'battle_bg').setOrigin(0, 0);
     this.add.rectangle(cx, height / 2, width, height, 0x0a0a18, 0.62);
 
-    // 读取本地关卡进度（v9.1：仅作远端未到达时的首屏兜底，权威源=远端）
-    let save = null;
-    try {
-      const raw = localStorage.getItem(LEVEL_SAVE_KEY);
-      save = raw ? JSON.parse(raw) : null;
-    } catch { save = null; }
-    this.levelManager = new LevelManager(cfg.levelsConfig, save);
+    // 关卡进度（v9.3：无本地存储——远端到达前用空进度，到达后重启场景应用）
+    this.levelManager = new LevelManager(cfg.levelsConfig, null);
     this.eliteMode = false;
 
-    // 全局强化（Meta 层）——首屏先用本地兜底快照，远端到达后覆盖（v9.1）
-    let globalSave = null;
-    try {
-      const raw = localStorage.getItem('lastline_globalsave');
-      globalSave = raw ? JSON.parse(raw) : null;
-    } catch { globalSave = null; }
-    globalSave = globalSave || { levels: {} };
+    // 全局强化（Meta 层）——远端到达前用空骨架，远端到达后覆盖并重启场景
+    let globalSave = { levels: {} };
     globalSave.equipment = globalSave.equipment || { inventory: [], nextUid: 1 };
     globalSave.equipped = globalSave.equipped || {};
     // 穿戴表消毒（同 GameScene）：单 uid + 合法六部位
@@ -85,41 +77,58 @@ export class MenuScene extends Phaser.Scene {
     globalSave.daily = globalSave.daily || { lastClaimDate: null, streakDay: 0 };
     globalSave.vip = globalSave.vip || { vipLevel: 0, vipExp: 0, goldBonus: 0 };
     this.globalUpgrades = new GlobalUpgradeSystem(cfg.globalUpgrades, globalSave);
-    this.forgeSystem = new EquipmentForgeSystem(cfg.equipment, globalSave.equipment);
-    globalSave.mercs = globalSave.mercs || { owned: {}, deployed: [null, null] };
-    globalSave.gems = globalSave.gems || { collection: {}, sockets: {}, nextUid: 1 };
-    this.mercenarySystem = new MercenarySystem(cfg.mercenaries, globalSave.mercs);
-    this.gemSystem = new GemSystem(undefined, globalSave.gems);
-    // GachaSystem(equipmentConfigs, save, config, forgeSystem, mercenarySystem, gemSystem)——传参对齐（此前多塞 null 致佣兵/gemSystem 错位）
-    this.gachaSystem = new GachaSystem(cfg.equipment, globalSave, undefined, this.forgeSystem, this.mercenarySystem, this.gemSystem);
-    this.dailySystem = new DailyRewardSystem(cfg.balance, globalSave.daily);
+    this._rebindSystems(cfg);
     this.vipSystem = new VipSystem(globalSave.vip);
     this.vipClient = new VipClient(this.playerId); // 按账号隔离 VIP 档案
     // 远端 VIP 信息异步刷新（服务端不可达则静默保留缓存）
+    // v9.2b：_remoteLoaded 闸门——远端档加载完成前禁止任何持久化（防空骨架覆盖远端有效数据）
+    this._remoteLoaded = false;
     this.vipClient.getVipInfo().then(info => {
-      if (info) {
+      if (info && this._remoteLoaded) {
         this.vipSystem.setInfo(info);
         globalSave.vip = { vipLevel: info.vipLevel, vipExp: info.vipExp, goldBonus: info.goldBonus };
         this._persistGlobalMenuSave();
       }
     });
-    // 远端存档同步（更新者胜：按保存时间戳决胜，而非单字段对比——
-    // 旧策略"远端 gold 更大就覆盖"会把抽卡/兑换后的本地进度回滚：花钱不减 gold，比较失真）
+    // 远端存档加载（v9.3 纯远端：到达即应用并重启场景；无远端数据=新号空进度）
+    // v9.2b 防覆盖：空骨架（无 gold 字段=从未游玩）不得反向推送覆盖远端有效数据
     this.saveRepo = new SyncedSaveRepository();
-    this.saveRepo.load(this.playerSlot || 1).then(remote => {
-      if (!remote?.global) return;
-      const localTs = Date.parse(localStorage.getItem('lastline_globalsave_ts') || '') || 0;
-      const remoteTs = Date.parse(remote.timestamp || '') || 0;
-      if (remoteTs > localTs) {
-        // 远端确有更新动作（另一设备/浏览器）→ 整体采用远端并重启
-        Object.assign(globalSave, remote.global);
-        this._persistGlobalMenuSave();
-        this.scene.restart();
-      } else if (remoteTs > 0 && localTs > 0) {
-        // 本地更新或无时间差 → 反向推送本地覆盖远端（消除陈旧快照）
-        this.saveRepo.save(this.playerSlot || 1, { global: globalSave, version: 2 });
+    const isEmptySkeleton = (g) => g && g.gold === undefined && (g.equipment?.inventory?.length ?? 0) === 0;
+    // v9.3c 防重启循环：远端档已在本次会话应用过则不再 load→restart
+    // 重启场景时远端数据经 registry 传递（create 局部变量不跨 restart 存活）
+    const remoteAppliedKey = 'remoteApplied_' + (this.playerSlot || 1);
+    const remoteDataKey = 'remoteData_' + (this.playerSlot || 1);
+    if (this.registry.get(remoteAppliedKey)) {
+      // 已应用：从 registry 取远端数据作为起点（restart 后 create 的空骨架 ← registry 数据）
+      const cached = this.registry.get(remoteDataKey);
+      if (cached) Object.assign(globalSave, cached);
+      this._rebindSystems(cfg); // v9.3d：重挂子系统引用（否则子系统持有旧空对象）
+      if (this.registry.get('levelProgress')) {
+        this.levelManager = new LevelManager(cfg.levelsConfig, this.registry.get('levelProgress'));
       }
-    });
+      this._remoteLoaded = true;
+    } else {
+      this.saveRepo.load(this.playerSlot || 1).then(remote => {
+        this._remoteLoaded = true; // 闸门开：此后持久化合法
+        if (remote?.global) {
+          this.registry.set(remoteAppliedKey, true);
+          this.registry.set(remoteDataKey, remote.global);
+          Object.assign(globalSave, remote.global);
+          // 关卡进度从远端回填
+          if (remote.global.levelProgress) {
+            this.levelManager = new LevelManager(cfg.levelsConfig, remote.global.levelProgress);
+            this.registry.set('levelProgress', remote.global.levelProgress);
+          }
+          this.scene.restart(); // 重建场景应用远端数据
+          return;
+        }
+        // 远端无档（新号）→ 本地骨架有游玩数据时才初始化远端档
+        this.registry.set(remoteAppliedKey, true);
+        if (!isEmptySkeleton(globalSave)) {
+          this.saveRepo.save(this.playerSlot || 1, { global: globalSave, version: 2 });
+        }
+      });
+    }
 
     // 标题
     this.add.text(cx, 70, '最 后 防 线', {
@@ -148,7 +157,7 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // --- 资源行：💰/💎/⚡ 一行三段 ---
-    this.menuGold = (save && save.gold) || 0;
+    this.menuGold = this.globalUpgrades.save.gold || 0; // v9.3：save 局部变量已随 localStorage 移除，直接读全局档
     {
       const lightState = new GameState(cfg.enemies, cfg.balance, cfg.equipment, null, {
         globalUpgrades: this.globalUpgrades,
@@ -185,7 +194,7 @@ export class MenuScene extends Phaser.Scene {
       if (this._forgePanel) return;
       this._forgePanel = new ForgePanel(this, this.forgeSystem, this.globalUpgrades.save, {
         gemSystem: this.gemSystem,
-        onClose: () => { this._forgePanel = null; this.scene.restart(); },
+        onClose: () => { this._forgePanel = null; },
         onPersist: () => this._persistGlobalMenuSave(),
       });
     });
@@ -193,7 +202,7 @@ export class MenuScene extends Phaser.Scene {
     mkMainBtn(2, 118, '🎰 抽卡', 0xaa5588, () => {
       if (this._gachaPanel) return;
       this._gachaPanel = new GachaPanel(this, this.gachaSystem, this.globalUpgrades.save, {
-        onClose: () => { this._gachaPanel = null; this.scene.restart(); },
+        onClose: () => { this._gachaPanel = null; },
         onPersist: () => this._persistGlobalMenuSave(),
       });
     });
@@ -201,18 +210,18 @@ export class MenuScene extends Phaser.Scene {
       if (this._tavernPanel) return;
       this._tavernPanel = new TavernPanel(this, this.mercenarySystem, this.globalUpgrades.save, {
         forgeRef: this.forgeSystem,
-        onClose: () => { this._tavernPanel = null; this.scene.restart(); },
+        onClose: () => { this._tavernPanel = null; },
         onPersist: () => this._persistGlobalMenuSave(),
       });
     });
 
-    // --- 次行按钮 ×3（等宽 110，间距 16）---
+    // --- 次行按钮 ×4（等宽 96，间距 10：总宽 4×96+3×10=414 ≤ 540）---
     const mkSubBtn = (idx, label, color, onClick) => {
-      const total = 3 * 110 + 2 * 16;
-      const x = cx - total / 2 + 110 / 2 + idx * (110 + 16);
-      const b = this.add.rectangle(x, rowBtnY, 110, 30, color).setInteractive({ useHandCursor: true });
+      const total = 4 * 96 + 3 * 10;
+      const x = cx - total / 2 + 96 / 2 + idx * (96 + 10);
+      const b = this.add.rectangle(x, rowBtnY, 96, 30, color).setInteractive({ useHandCursor: true });
       this.add.text(x, rowBtnY, label, {
-        fontSize: '13px', fill: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
+        fontSize: '12.5px', fill: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
       }).setOrigin(0.5);
       b.on('pointerdown', onClick);
       return b;
@@ -220,6 +229,7 @@ export class MenuScene extends Phaser.Scene {
     mkSubBtn(0, `📅 签到`, 0x228866, () => this._openDailyPanel());
     this.vipBtnText = mkSubBtn(1, `👑 VIP${this.vipSystem.level}`, 0xaa8822, () => this._openVipPanel());
     mkSubBtn(2, '📊 属性', 0x446688, () => this._openVanguardPanel());
+    mkSubBtn(3, `⚙️ 账号`, 0x556677, () => this._openAccountPanel());
 
     // 未领取 → 自动弹出
     if (this.dailySystem.canClaim()) {
@@ -231,10 +241,46 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
+  /** ⚙️ 账号设置（修改密码 / 删除账号） */
+  _openAccountPanel() {
+    if (this._accountPanel) return;
+    this._accountPanel = new AccountPanel(this, this.playerId, {
+      onClose: () => { this._accountPanel = null; this._domCleanup(); },
+      onDeleted: () => {
+        // 账号已删除：清会话回登录页
+        AuthClient.clearSession();
+        this._accountPanel = null;
+        this._domCleanup();
+        this.scene.restart();
+      },
+    });
+  }
+
+  /**
+   * 子系统绑定（v9.3d）：以当前 globalSave 的子对象引用重建全部 Meta 子系统。
+   * 远端数据应用（Object.assign 替换顶层子对象）后必须重调——否则子系统持有旧空对象引用，
+   * 表现为"装备/宝石/佣兵消失、签到状态不更新"（v9.3c 用户报告的根因）。
+   */
+  _rebindSystems(cfg) {
+    const globalSave = this.globalUpgrades.save;
+    globalSave.equipment = globalSave.equipment || { inventory: [], nextUid: 1 };
+    globalSave.equipped = globalSave.equipped || {};
+    globalSave.mercs = globalSave.mercs || { owned: {}, deployed: [null, null] };
+    globalSave.gems = globalSave.gems || { collection: {}, sockets: {}, nextUid: 1 };
+    globalSave.daily = globalSave.daily || { lastClaimDate: null, streakDay: 0 };
+    globalSave.vip = globalSave.vip || { vipLevel: 0, vipExp: 0, goldBonus: 0 };
+    this.forgeSystem = new EquipmentForgeSystem(cfg.equipment, globalSave.equipment);
+    this.mercenarySystem = new MercenarySystem(cfg.mercenaries, globalSave.mercs);
+    this.gemSystem = new GemSystem(undefined, globalSave.gems);
+    // GachaSystem(equipmentConfigs, save, config, forgeSystem, mercenarySystem, gemSystem)
+    this.gachaSystem = new GachaSystem(cfg.equipment, globalSave, undefined, this.forgeSystem, this.mercenarySystem, this.gemSystem);
+    this.dailySystem = new DailyRewardSystem(cfg.balance, globalSave.daily);
+  }
+
   _openDailyPanel() {
     if (this._dailyPanel) return;
     this._dailyPanel = new DailyPanel(this, this.dailySystem, this.globalUpgrades.save, {
-      onClose: () => { this._dailyPanel = null; this.scene.restart(); },
+      onClose: () => { this._dailyPanel = null; },
       onPersist: () => this._persistGlobalMenuSave(),
     });
   }
@@ -306,13 +352,14 @@ export class MenuScene extends Phaser.Scene {
   }
 
   _persistGlobalMenuSave() {
-    try {
-      // 权威源=远端；localStorage 仅作离线兜底缓存
-      const save = { global: this.globalUpgrades.save, version: 2 };
-      localStorage.setItem('lastline_globalsave', JSON.stringify(this.globalUpgrades.save));
-      localStorage.setItem('lastline_globalsave_ts', new Date().toISOString());
-      this.saveRepo.save(this.playerSlot || 1, save); // 双写：本地缓存 + 远端（远端失败静默，本地保底）
-    } catch { /* ignore */ }
+    // v9.2b：远端档未加载完成前禁止持久化（空骨架会覆盖远端有效数据）
+    if (!this._remoteLoaded) return;
+    if (this.levelManager) this.globalUpgrades.save.levelProgress = this.levelManager.save;
+    const save = { global: this.globalUpgrades.save, version: 2 };
+    // 同步 registry 缓存（面板重启后以此为起点）
+    this.registry.set('remoteData_' + (this.playerSlot || 1), this.globalUpgrades.save);
+    this.registry.set('levelProgress', this.levelManager?.save || null);
+    this.saveRepo.save(this.playerSlot || 1, save);
   }
 
   /** 📊 先锋官属性明细面板（组装各系统 breakdown） */
@@ -363,7 +410,7 @@ export class MenuScene extends Phaser.Scene {
   _openVipPanel() {
     if (this._vipPanel) return;
     this._vipPanel = new VipPanel(this, this.vipSystem, this.vipClient, {
-      onClose: () => { this._vipPanel = null; this._domCleanup(); this.scene.restart(); },
+      onClose: () => { this._vipPanel = null; this._domCleanup(); },
       onPersist: () => this._persistGlobalMenuSave(),
       onVipUpdate: () => { /* 特权即时生效（modifiers 每次 getResolvedStats 重算） */ },
     });
@@ -585,6 +632,8 @@ export class MenuScene extends Phaser.Scene {
         this.registry.set('eliteMode', this.eliteMode);
         this.registry.set('playerSlot', this.playerSlot || 1);
         this.registry.set('playerId', this.playerId || 'player1');
+        this.registry.set('levelProgress', this.levelManager?.save || null);
+        this.registry.set('globalSave', this.globalUpgrades.save);
         this.scene.start('GameScene');
       });
     }

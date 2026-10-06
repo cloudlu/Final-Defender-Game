@@ -367,9 +367,13 @@ export class GameState {
 
   _createProjectile(skillId, fromCol, fromRow, toCol, toRow, opts) {
     // 方向速度弹（反弹球）：给 bouncesLeft 时按"方向+速率"飞行而非追点
-    const isDirectional = opts.bouncesLeft !== undefined;
+    // v9.2：directionAngle（弧度）——纯角度定向（连射扇面弹），toCol/toRow 忽略
+    const isDirectional = opts.bouncesLeft !== undefined || opts.directionAngle !== undefined;
     let dirX = 0, dirY = 0, speed = opts.speed || 18;
-    if (isDirectional) {
+    if (opts.directionAngle !== undefined) {
+      dirX = Math.cos(opts.directionAngle);
+      dirY = Math.sin(opts.directionAngle);
+    } else if (isDirectional) {
       const dx = toCol - fromCol, dy = toRow - fromRow;
       const len = Math.sqrt(dx * dx + dy * dy) || 1;
       dirX = dx / len; dirY = dy / len;
@@ -383,7 +387,9 @@ export class GameState {
       splitGen: opts.splitGen || 0,
       // 弹射球专用
       directional: isDirectional, dirX, dirY,
-      bouncesLeft: opts.bouncesLeft ?? null, lifespan: opts.lifespan ?? null,
+      // 角度弹（连射/分裂扇面）：无反弹、限时 lifespan；纯角度弹不再依赖 bouncesLeft
+      bouncesLeft: opts.bouncesLeft ?? null, lifespan: opts.lifespan ?? (opts.directionAngle !== undefined ? 1.2 : null),
+      angleBullet: opts.directionAngle !== undefined,
     });
   }
 
@@ -505,6 +511,21 @@ export class GameState {
         this.startWave();
       }
     }
+    // v9.4 自愈：波间卡死检测——既无怪又无 queue 且 countdown≤0 超过 8 秒（正常应为 0 帧过渡）强制开波
+    if (!this.waveManager.waveActive && !this.levelCleared && this.waveCountdown <= 0) {
+      const q = this.waveManager.spawnQueue.length;
+      const alive = this.enemies.filter(e => e.alive).length;
+      if (q === 0 && alive === 0) {
+        this._idleSince = (this._idleSince ?? 0) + dt;
+        if (this._idleSince > 8) {
+          console.warn('[自愈] 波间空转超 8s，强制开波', this.waveManager.currentWave + 1);
+          this._idleSince = 0;
+          this.startWave();
+        }
+      } else this._idleSince = 0;
+    } else {
+      this._idleSince = 0;
+    }
 
     // Spawn
     const spawn = this.waveManager.update(dt);
@@ -571,31 +592,44 @@ export class GameState {
       if (targets[0]) {
         const pierceLv = this.player.getPassiveLevel('pierce');
         const multiLv = this.player.getPassiveLevel('multishot');
-        // 主弹 + 连射副弹（扇形偏移）
-        const shots = 1 + multiLv;      // 连射：扇形多弹
         const splitLv = this.player.getPassiveLevel('splitshot'); // 分裂：平行多列
         const giantLv = this.player.getPassiveLevel('giant');
-        const lanes = 1 + splitLv;      // 总列数（含主列）
-        const totalShots = shots * lanes;
-        for (let i = 0; i < totalShots; i++) {
-          const shotIdx = i % shots;    // 同"组"内扇形
-          const laneIdx = Math.floor(i / shots); // 列偏移
-          const spread = shots > 1 ? (shotIdx - (shots - 1) / 2) * 0.5 : 0;
-          const laneOffset = (laneIdx - (lanes - 1) / 2) * 0.9; // 平行列横向偏移（格）
-          const t = targets[i % targets.length];
-          // 子弹尺寸随伤害加成+巨大化被动成长（玩家可"看到"攻击力成长）
-          const size = Math.min(7, (2 + (stats.damage - 1) * 1.5) * (1 + 0.4 * giantLv));
-          const isMainLane = laneIdx === Math.floor((lanes - 1) / 2);
-          // 原版弹道：全部直线弹（锁定发射瞬间目标位置，飞行中不跟随）
-          // 枪械伤害宝石只加成本弹道（原版：枪械攻击独立）
-          // 枪械伤害宝石 + 枪械研发（对齐原版双独立乘区：枪械只吃枪械加成）
-          const gunMult = (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1);
-          this._createProjectile('attack', this.player.x, this.player.y, t.col + spread + laneOffset, t.row, {
-            damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * (isMainLane ? 1 : 0.6) * gunMult,
-            targetEnemy: null,
-            color: stats.damage > 1.5 ? 0x88ffcc : 0xffffff, size,
-            speed: 22, pierce: pierceLv,
-          });
+        const gunMult = (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1);
+        const size = Math.min(7, (2 + (stats.damage - 1) * 1.5) * (1 + 0.4 * giantLv));
+        const color = stats.damage > 1.5 ? 0x88ffcc : 0xffffff;
+
+        // v9.2 视觉/机制分离：
+        //  连射（multishot）= 真扇形散射：每发独立角度，从枪口呈扇面散开（directional 角度弹）
+        //  分裂（splitshot）= 平行弹幕：与主弹严格平行，仅横向错位（多管机枪齐射感），弹体小一圈
+        const baseAngle = Math.atan2(
+          targets[0].row - this.player.y,
+          targets[0].col - this.player.x
+        );
+        const lanes = 1 + splitLv;
+        const shotsPerLane = 1 + multiLv;
+        const SPREAD_ARC = 0.22; // 连射相邻弹夹角（弧度）≈12.6°
+        const LANE_GAP = 0.9;    // 分裂相邻列横向间距（格）
+
+        for (let lane = 0; lane < lanes; lane++) {
+          const laneIdx = lane - (lanes - 1) / 2;           // -n..0..+n
+          const isMainLane = lane === Math.floor((lanes - 1) / 2);
+          // 分裂：横向平移发射起点（保持角度平行）
+          const px = this.player.x - Math.sin(baseAngle) * laneIdx * LANE_GAP;
+          const py = this.player.y + Math.cos(baseAngle) * laneIdx * LANE_GAP;
+          for (let s = 0; s < shotsPerLane; s++) {
+            const shotIdx = s - (shotsPerLane - 1) / 2;     // -n..0..+n
+            const angle = baseAngle + shotIdx * SPREAD_ARC; // 连射：扇形角
+            const t = targets[(lane * shotsPerLane + s) % targets.length];
+            const isMain = isMainLane && s === Math.floor((shotsPerLane - 1) / 2);
+            this._createProjectile('attack', px, py, angle, 0, {
+              damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * (isMain ? 1 : 0.6) * gunMult,
+              targetEnemy: null,
+              color, size: isMain ? size : size * 0.85,
+              speed: 22, pierce: pierceLv,
+              // 方向速度弹（直线飞行不追点）：angle 形式
+              directionAngle: angle,
+            });
+          }
         }
       }
     }
@@ -636,7 +670,7 @@ export class GameState {
     for (const p of this.projectiles) {
       if (!p.alive) continue;
 
-      // 弹射球：方向速度弹（撞边界反弹、寿命递减）
+      // 方向速度弹（反弹球 + 角度弹）：按"方向+速率"飞行
       if (p.directional) {
         if (p.lifespan !== null) {
           p.lifespan -= dt;
@@ -644,16 +678,31 @@ export class GameState {
         }
         p.col += p.dirX * p.speed * dt;
         p.row += p.dirY * p.speed * dt;
-        // 边界反弹（左右墙 + 顶部 + 底部墙线前反弹=不进英雄区）
+        // 边界处理：角度弹（连射/分裂）飞离出发区后出界即消失（出发时在墙后，不能立即判出界）
         const leftEdge = 0.2, rightEdge = GRID.COLS - 0.2, topEdge = -0.2, bottomEdge = this.wallRow - 0.3;
-        if (p.col <= leftEdge) { p.col = leftEdge; p.dirX = Math.abs(p.dirX); p.bouncesLeft--; }
-        if (p.col >= rightEdge) { p.col = rightEdge; p.dirX = -Math.abs(p.dirX); p.bouncesLeft--; }
-        if (p.row <= topEdge) { p.row = topEdge; p.dirY = Math.abs(p.dirY); p.bouncesLeft--; }
-        if (p.row >= bottomEdge) { p.row = bottomEdge; p.dirY = -Math.abs(p.dirY); p.bouncesLeft--; }
-        // 路径碰撞（穿透式：不消失不反弹，只造成伤害）
+        if (p.angleBullet) {
+          if (!p._leftSpawn && p.row > bottomEdge) {
+            // 仍在出发区（墙后）：仅当飞出左右边界才消失
+            if (p.col <= leftEdge || p.col >= rightEdge) { p.alive = false; this._onProjectileEnd(p); continue; }
+          } else {
+            p._leftSpawn = true;
+            if (p.col <= leftEdge || p.col >= rightEdge || p.row <= topEdge) { p.alive = false; this._onProjectileEnd(p); continue; }
+          }
+          if (p.lifespan !== null) {
+            p.lifespan -= dt;
+            if (p.lifespan <= 0) { p.alive = false; this._onProjectileEnd(p); continue; }
+          }
+        } else {
+          if (p.col <= leftEdge) { p.col = leftEdge; p.dirX = Math.abs(p.dirX); p.bouncesLeft--; }
+          if (p.col >= rightEdge) { p.col = rightEdge; p.dirX = -Math.abs(p.dirX); p.bouncesLeft--; }
+          if (p.row <= topEdge) { p.row = topEdge; p.dirY = Math.abs(p.dirY); p.bouncesLeft--; }
+          if (p.row >= bottomEdge) { p.row = bottomEdge; p.dirY = -Math.abs(p.dirY); p.bouncesLeft--; }
+        }
+        // 路径碰撞（穿透式：不消失不反弹，只造成伤害；角度弹条件放宽——不再要求 lifespan 判定）
         for (const e of this.enemies) {
           if (!e.alive || p.hitIds.has(e.id)) continue;
-          if (p.lifespan !== null && p.lifespan > 0 && distanceCells(p.col, p.row, e.col, e.row) < 0.55) {
+          const hitOk = p.angleBullet ? true : (p.lifespan !== null && p.lifespan > 0);
+          if (hitOk && distanceCells(p.col, p.row, e.col, e.row) < 0.55) {
             p.hitIds.add(e.id);
             const killed = e.takeDamage(p.damage);
             this.events.push({ type: 'hit', target: e, damage: p.damage, isCrit: false, killed, skill: p.skillId });

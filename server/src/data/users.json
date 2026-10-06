@@ -1,17 +1,18 @@
 {
-  "nextId": 3,
+  "nextId": 6,
   "users": {
-    "liangliang": {
+    "亮亮": {
       "id": "u1",
-      "salt": "49781d896359d2cd",
-      "passwordHash": "c6cc89c91b297a88b78abc065b450d1c0ade164beb7574ee2ce1d4f44eed631c",
-      "createdAt": "2026-10-05T15:49:20.891Z"
+      "salt": "2b3e308535949441",
+      "passwordHash": "ec12c9e332b1c0ca5d7f71295c6b97a1fe7e9cb1255b0da8604139b98a502c55",
+      "createdAt": "2026-10-05T15:49:20.891Z",
+      "passwordChangedAt": "2026-10-06T14:51:00.641Z"
     },
-    "tester1": {
-      "id": "u2",
-      "salt": "16af816ceb14c426",
-      "passwordHash": "b9cc989501aaad793af9286152f49e256d446b59dd5dd25fa350c8cb9d4bb81b",
-      "createdAt": "2026-10-05T15:49:20.963Z"
+    "芦煜轩": {
+      "id": "u4",
+      "salt": "21804350a5b14f62",
+      "passwordHash": "5f8fa5b2c2bc4c909c16d4e79c399839ee1671ca327efd0c6c886af0ee133642",
+      "createdAt": "2026-10-06T14:09:26.921Z"
     }
   }
 }

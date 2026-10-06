@@ -21,8 +21,7 @@ import { VipSystem } from '../engine/VipSystem.js';
 import { ReviveSystem } from '../engine/ReviveSystem.js';
 import { SyncedSaveRepository } from '../repository/SyncedSaveRepository.js';
 
-const LEVEL_SAVE_KEY = 'lastline_levelsave';
-const GLOBAL_SAVE_KEY = 'lastline_globalsave';
+// v9.3 纯远端：本地存储已移除（原 LEVEL_SAVE_KEY/GLOBAL_SAVE_KEY 常量删除）
 
 /**
  * GameScene: 薄壳。职责仅三件事：
@@ -43,7 +42,8 @@ export class GameScene extends Phaser.Scene {
     const elite = this.registry.get('eliteMode') || false;
     this.levelManager = new LevelManager(cfg.levelsConfig, this._loadLevelSave());
     this.levelRuntime = this.levelManager.startLevel(levelId, { elite });
-    this.globalUpgradeSystem = new GlobalUpgradeSystem(cfg.globalUpgrades, this._loadGlobalSave());
+    // v9.3 纯远端：全局档由 MenuScene 经 registry 传入（无本地存储）
+    this.globalUpgradeSystem = new GlobalUpgradeSystem(cfg.globalUpgrades, this.registry.get('globalSave') || { levels: {} });
     // 子系统存档必须挂回全局档（同一引用），否则 forgeSystem 的仓库写不进全局存档
     this.globalUpgradeSystem.save.equipment = this.globalUpgradeSystem.save.equipment || { inventory: [], nextUid: 1 };
     this.globalUpgradeSystem.save.equipped = this.globalUpgradeSystem.save.equipped || {};
@@ -141,33 +141,21 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // v9.3 纯远端：无本地存储。关卡进度经 registry 传入（MenuScene 远端加载后 set），持久化只推远端。
   _loadLevelSave() {
-    try {
-      const raw = localStorage.getItem(LEVEL_SAVE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+    const lp = this.registry.get('levelProgress');
+    return lp || null;
   }
 
   _persistLevelSave() {
-    try {
-      localStorage.setItem(LEVEL_SAVE_KEY, JSON.stringify(this.levelManager.save));
-    } catch { /* storage unavailable */ }
-  }
-
-  _loadGlobalSave() {
-    try {
-      const raw = localStorage.getItem(GLOBAL_SAVE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+    this.globalUpgradeSystem.save.levelProgress = this.levelManager.save;
+    this.registry.set('levelProgress', this.levelManager.save);
   }
 
   _persistGlobalSave() {
-    try {
-      // 权威源=远端；localStorage 仅作离线兜底缓存（双写，远端失败不阻塞）
-      this._remoteSave?.(this.globalUpgradeSystem.save);
-      localStorage.setItem(GLOBAL_SAVE_KEY, JSON.stringify(this.globalUpgradeSystem.save));
-      localStorage.setItem('lastline_globalsave_ts', new Date().toISOString());
-    } catch { /* storage unavailable */ }
+    // 纯远端：只推远端（断网即存不进）
+    this._persistLevelSave();
+    this._remoteSave?.(this.globalUpgradeSystem.save);
   }
 
   /** 关卡任务简报（1-2 句剧情，2.8 秒后淡出） */
@@ -201,13 +189,13 @@ export class GameScene extends Phaser.Scene {
     let diamondReward = firstClear ? (this.levelRuntime.diamondReward || 50) : 0;
     diamondReward = Math.round(diamondReward * rewardMult);
     this.globalUpgradeSystem.save.diamond = (this.globalUpgradeSystem.save.diamond || 0) + diamondReward;
-    this._persistGlobalSave();
     const result = this.levelManager.completeLevel(this.levelRuntime.levelId, {
       wallHpLeft: this.state.lives,
       wallHpMax: this.state.wallHpMax,
       elite: this.levelRuntime.elite,
     });
-    this._persistLevelSave();
+    this._persistLevelSave();  // 先挂 levelProgress 再统一持久化（v9.1）
+    this._persistGlobalSave(); // 一并推远端
     const hasNext = !!this.levelManager.getLevel(this._nextLevelId());
     new LevelClearOverlay(this, {
       ...result,
@@ -437,7 +425,19 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.state.gameOver) { this.showGameOver(); return; }
-    if (this._anyOverlayVisible()) return;
+    if (this._anyOverlayVisible()) {
+      // v9.4 自愈：覆盖层 visible 卡死 >60s（无玩家交互且无 render 异常）强制复位——
+      // 防御"怪不出+倒计时冻结"的永久冻结态
+      this._overlayStuckSince = this._overlayStuckSince || time;
+      if (time - this._overlayStuckSince > 60000) {
+        console.warn('[自愈] 覆盖层可见超 60s，强制复位');
+        this.upgradeOverlay.hide();
+        this.state.pendingLevelUp = false;
+        this._overlayStuckSince = null;
+      }
+      return;
+    }
+    this._overlayStuckSince = null;
 
     // 升级三选一：打断战斗，优先于一切
     if (this.state.pendingLevelUp) {
@@ -764,6 +764,7 @@ export class GameScene extends Phaser.Scene {
   /** 最终败局：安慰金结算 + 结算画面 */
   _finalGameOver() {
     // 败局 consolation：30% 金币仍进全局存档
+    // v9.4 修复：原代码 gold = gold + _persistGlobalSave()（返回 undefined）→ gold 中毒为 NaN 持久化
     const consolation = Math.floor(this.state.gold * 0.3);
     if (consolation > 0) {
       this.globalUpgradeSystem.save.gold = (this.globalUpgradeSystem.save.gold || 0) + consolation;

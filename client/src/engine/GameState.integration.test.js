@@ -646,9 +646,12 @@ describe('GameState integration with real config data', () => {
     state.enemies.push(e);
     state.applyUpgrade({ kind: 'skill', id: 'multishot' });
     expect(state.player.getPassiveLevel('multishot')).toBe(1);
-    // 走完整 update 循环触发自动射击（0.4s 间隔）
-    for (let i = 0; i < 30; i++) state.update(1 / 30);
-    expect(state.projectiles.length).toBeGreaterThanOrEqual(2);
+    let fired = 0;
+    const orig = state._createProjectile.bind(state);
+    state._createProjectile = (...args) => { if (args[0] === 'attack') fired++; return orig(...args); };
+    // 90 帧 = 3 秒（0.4s 间隔至少 7 次开火窗口；30 帧=1s 在 waveActive=false 时 autoAttackTimer 初值差异下可能 0 次）
+    for (let i = 0; i < 90; i++) state.update(1 / 30);
+    expect(fired).toBeGreaterThanOrEqual(2);
   });
 
   it('pierce passive lets projectiles hit multiple enemies', () => {
@@ -671,16 +674,18 @@ describe('GameState integration with real config data', () => {
     state.enemies.push(new Enemy(cfg, 4, 8, 1.0));
     state.applyUpgrade({ kind: 'skill', id: 'splitshot' });
     expect(state.player.getPassiveLevel('splitshot')).toBe(1);
-    // 触发一次自动射击（走完整 update）
-    for (let i = 0; i < 30; i++) state.update(1 / 30);
-    // Lv1 分裂 = 2 列；连射未解锁 shots=1 → 共 2 发
-    const fired = state.projectiles.filter(p => p.skillId === 'attack');
+    // 拦截计数+记录伤害（v9.2 弹道飞得快，事后数 projectiles 会已消失）
+    const fired = [];
+    const orig = state._createProjectile.bind(state);
+    state._createProjectile = (skillId, fromCol, fromRow, toCol, toRow, opts) => {
+      if (skillId === 'attack') fired.push(opts?.damage);
+      return orig(skillId, fromCol, fromRow, toCol, toRow, opts);
+    };
+    for (let i = 0; i < 90; i++) state.update(1 / 30);
+    // Lv1 分裂 = 2 列；连射未解锁 shots=1 → 每轮 2 发（90 帧多轮开火，只验首轮 2 发）
     expect(fired.length).toBeGreaterThanOrEqual(2);
-    // 副列伤害 60%
-    const damages = fired.map(p => p.damage).sort((a, b) => b - a);
-    if (damages.length >= 2) {
-      expect(damages[1]).toBeCloseTo(damages[0] * 0.6, 3);
-    }
+    const firstRound = fired.slice(0, 2).sort((a, b) => b - a);
+    expect(firstRound[1]).toBeCloseTo(firstRound[0] * 0.6, 3);
   });
 
   it('airblade pierce line starts from cast direction', () => {

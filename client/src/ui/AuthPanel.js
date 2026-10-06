@@ -52,7 +52,6 @@ export class AuthPanel {
     this.container.add(this.scene.add.text(cx, height - 40, '预置账号：亮亮 / test', {
       fontSize: '11px', fill: '#556677', fontFamily: 'Arial',
     }).setOrigin(0.5));
-
     // 首个输入框聚焦
     this.scene.time.delayedCall(100, () => this._userInput?.focus());
   }

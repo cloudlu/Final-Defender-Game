@@ -26,9 +26,9 @@ export class AuthService {
     } catch {
       this._users = { nextId: 1, users: {} };
     }
-    // 种子账号：liangliang/test（登录名用 ASCII 规避 Windows 控制台编码坑；游戏内显示名可中文）
-    if (!this._users.users['liangliang']) {
-      await this.register('liangliang', 'test').catch(() => {});
+    // 种子账号：亮亮/test（服务端 UTF-8 JSON 原生支持中文；此前 ASCII 回避实为测试脚本编码误报）
+    if (!this._users.users['亮亮']) {
+      await this.register('亮亮', 'test').catch(() => {});
     }
     return this._users;
   }
@@ -78,5 +78,43 @@ export class AuthService {
     const db = await this._loadUsers();
     const u = db.users[String(username || '').trim()];
     return u ? u.id : null;
+  }
+
+  /** 修改密码（已登录：验旧密码设新密码） */
+  async changePassword(username, oldPassword, newPassword) {
+    const db = await this._loadUsers();
+    const u = db.users[String(username || '').trim()];
+    if (!u) return { success: false, error: '用户不存在' };
+    if (u.passwordHash !== AuthService._hash(u.salt, String(oldPassword))) {
+      return { success: false, error: '旧密码错误' };
+    }
+    if (String(newPassword).length < 4) return { success: false, error: '新密码至少 4 位' };
+    const salt = crypto.randomBytes(8).toString('hex');
+    u.salt = salt;
+    u.passwordHash = AuthService._hash(salt, String(newPassword));
+    u.passwordChangedAt = new Date().toISOString();
+    await this._saveUsers();
+    return { success: true };
+  }
+
+  /** 删除账号（验密码二次确认；同时删除该用户全部存档，不可恢复） */
+  async deleteAccount(username, password) {
+    const db = await this._loadUsers();
+    const name = String(username || '').trim();
+    const u = db.users[name];
+    if (!u) return { success: false, error: '用户不存在' };
+    if (u.passwordHash !== AuthService._hash(u.salt, String(password))) {
+      return { success: false, error: '密码错误（删除账号需密码确认）' };
+    }
+    const id = u.id;
+    delete db.users[name];
+    await this._saveUsers();
+    // 删除该用户全部存档
+    let saveDeleted = false;
+    try {
+      await fs.unlink(path.join(SAVES_DIR, `${id}.json`));
+      saveDeleted = true;
+    } catch { /* 无档视为已删 */ }
+    return { success: true, saveDeleted };
   }
 }
