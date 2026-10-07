@@ -64,7 +64,14 @@
       },
       "resistFreeze": true,
       "freezeHeal": true,
+      "arena": { "type": "darkFog", "projSpeedMult": 0.55 },
       "skills": [
+        {
+          "type": "rangedAttack",
+          "interval": 5,
+          "damage": 4,
+          "speed": 5
+        },
         {
           "type": "summon",
           "interval": 8,
@@ -180,7 +187,14 @@
         "physical": 0
       },
       "immuneKnock": true,
+      "arena": { "type": "solarFlare", "flareDps": 2 },
       "skills": [
+        {
+          "type": "rangedAttack",
+          "interval": 6,
+          "damage": 5,
+          "speed": 4
+        },
         {
           "type": "summon",
           "interval": 8,
@@ -222,7 +236,14 @@
         "wind": 1
       },
       "immuneKnock": true,
+      "arena": { "type": "empField", "cdMult": 0.3 },
       "skills": [
+        {
+          "type": "rangedAttack",
+          "interval": 7,
+          "damage": 5,
+          "speed": 4.5
+        },
         {
           "type": "summon",
           "interval": 9,

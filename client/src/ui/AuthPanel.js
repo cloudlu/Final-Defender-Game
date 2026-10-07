@@ -109,7 +109,7 @@ export class AuthPanel {
       const res = await fetch(`/api/auth/slot?username=${encodeURIComponent(r.username)}`);
       if (res.ok) slot = (await res.json()).slot;
     } catch { /* 服务端不可达用默认槽 */ }
-    AuthClient.setSession(r.username, slot);
+    AuthClient.setSession(r.username, slot, r.token);
     this._cleanup();
     this.container.destroy();
     this.onAuthed(r.username, slot);

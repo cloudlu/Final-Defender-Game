@@ -63,6 +63,9 @@ export class GameState {
 
     this.leakedThisWave = 0;
     this.killedThisWave = 0;
+    // v9.11 BOSS 远程弹与环境效果
+    this._enemyShots = [];
+    this.arena = null;
 
     // 自动出波：首波 3 秒，波间 5 秒
     this.autoWave = balanceConfig.autoWave || { firstWaveDelay: 3, interWaveDelay: 5 };
@@ -88,6 +91,13 @@ export class GameState {
     const hasTarget = targetCol !== null && targetRow !== null;
     const result = this.player.useSkill(skillId, hasTarget ? targetCol : this.player.x, hasTarget ? targetRow : this.player.y);
     if (!result) return null;
+    // v9.11 empField 环境效果：技能冷却 ×(1+cdMult)
+    if (this.arena?.type === 'empField' && result.cooldownActual) {
+      const boosted = Math.round(result.cooldownActual * (1 + (this.arena.cdMult || 0.3)) * 100) / 100;
+      const sk = this.player.skills.find(s => s.id === skillId);
+      if (sk) sk.currentCooldown = boosted;
+      result.cooldownActual = boosted;
+    }
     const affected = [];
     const skill = this.player.skills.find(s => s.id === skillId);
     const stats = this.getResolvedStats();
@@ -531,6 +541,23 @@ export class GameState {
     const spawn = this.waveManager.update(dt);
     if (spawn) {
       const enemy = new Enemy(spawn.config, spawn.spawnCol, spawn.spawnRow, spawn.difficultyMultiplier, this.rng);
+      // v9.14 调试倍率：敌血/敌速（?debug=1 面板设置）
+      if (this.debugEnemyHpMult !== undefined && this.debugEnemyHpMult !== 1) {
+        enemy.maxHp = Math.round(enemy.maxHp * this.debugEnemyHpMult);
+        enemy.hp = enemy.maxHp;
+      }
+      if (this.debugEnemySpeedMult !== undefined && this.debugEnemySpeedMult !== 1) {
+        enemy.speed *= this.debugEnemySpeedMult;
+      }
+      // v9.8 精英怪：S2 起（currentWave 跨关累计≥8）每只 8% 概率精英化——血 ×4、赏金 ×3、撞墙 +1，
+      // 挂 enemy.elite 激活精英增伤宝石/佣兵词条（此前 eliteDamage 只对 BOSS 生效）
+      const totalWave = (this.waveManager.currentWave - 1) * (this.levelRuntime?.totalWaves || 7) + this.waveManager.currentWave;
+      if (totalWave >= 8 && this.rng.next() < 0.08) {
+        enemy.elite = true;
+        enemy.maxHp *= 4; enemy.hp *= 4;
+        enemy.bounty = Math.round(enemy.bounty * 3);
+        enemy.wallDamageBonus = (enemy.wallDamageBonus || 0) + 1;
+      }
       this.enemies.push(enemy);
     }
 
@@ -544,11 +571,39 @@ export class GameState {
     // BOSS 技能推进
     const bossEvents = this.bossManager.update(dt, {
       spawnEnemyFn: (enemyId) => this._spawnMinion(enemyId),
+      onRangedAttack: (col, damage, speed) => this._spawnEnemyShot(col, damage, speed),
     });
     for (const ev of bossEvents) {
       this.events.push(ev);
       if (ev.type === 'warnRoar') this._roarPendings.push({ delay: ev.warnSeconds, silenceSeconds: ev.silenceSeconds });
     }
+    // v9.11 环境效果状态缓存（UI/弹速/CD 乘区每帧查询）
+    this.arena = this.bossManager.getArena();
+    // solarFlare：城墙每秒灼烧
+    if (this.arena?.type === 'solarFlare') {
+      this._flareBurnAcc = (this._flareBurnAcc ?? 0) + dt;
+      if (this._flareBurnAcc >= 1) {
+        this._flareBurnAcc -= 1;
+        const burn = this.arena.flareDps || 2;
+        this.lives = Math.max(0, this.lives - burn);
+        this.events.push({ type: 'wallHit', damage: burn, enemyId: 'arena', col: 3.5, row: this.wallRow });
+        if (this.lives <= 0) this.gameOver = true;
+      }
+    }
+    // 敌方弹道：飞行+到墙扣血（可被 blocksProjectiles 怪挡？敌方弹只打墙，直线无碰撞）
+    for (const shot of this._enemyShots) {
+      shot.row += shot.speed * dt;
+      if (shot.row >= this.wallRow - 0.3) {
+        shot.alive = false;
+        if (this.invulnTimer <= 0) {
+          this.lives = Math.max(0, this.lives - shot.damage);
+          this.leakedThisWave++;
+          this.events.push({ type: 'wallHit', damage: shot.damage, enemyId: 'bossShot', col: shot.col, row: this.wallRow });
+          if (this.lives <= 0) this.gameOver = true;
+        }
+      }
+    }
+    this._enemyShots = this._enemyShots.filter(s => s.alive);
     // roar 预警落地
     for (let i = this._roarPendings.length - 1; i >= 0; i--) {
       this._roarPendings[i].delay -= dt;
@@ -565,6 +620,8 @@ export class GameState {
     // Player
     this.player.update(dt);
     const stats = this.getResolvedStats();
+    // v9.14 调试倍率（?debug=1 面板设置）：伤害全局乘区
+    if (this.debugDmgMult !== undefined && this.debugDmgMult !== 1) stats.damage *= this.debugDmgMult;
     // 攻速同时作用于射击间隔与枪械自身冷却（消除双闸门节拍漏射）；3 位取整防浮点尾数（0.22000000000003）
     this.player.setAttackCadence(Math.round((0.4 / stats.attackSpeed) * 1000) / 1000);
 
@@ -610,7 +667,7 @@ export class GameState {
               this._createProjectile('attack', this.player.x, this.player.y, t.col, t.row, {
                 damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * gunMult,
                 targetEnemy: t, color, size,
-                speed: 22, pierce: pierceLv,
+                speed: Math.round(22 * this._arenaProjSpeedMult() * 100) / 100, pierce: pierceLv,
               });
             } else {
               // 副弹：方向弹朝扇形偏角（打偏移目标位置，允许打空）
@@ -618,7 +675,7 @@ export class GameState {
               this._createProjectile('attack', this.player.x, this.player.y, angle, 0, {
                 damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * 0.6 * gunMult,
                 targetEnemy: null, color, size: size * 0.85,
-                speed: 22, pierce: pierceLv,
+                speed: Math.round(22 * this._arenaProjSpeedMult() * 100) / 100, pierce: pierceLv,
                 directionAngle: angle,
               });
             }
@@ -978,6 +1035,16 @@ export class GameState {
     this.events.push({ type: 'mercFire', name: merc.name, slotIdx, color });
   }
 
+  /** v9.11 环境效果弹速乘区（darkFog 黑暗迷雾 0.55；默认 1） */
+  _arenaProjSpeedMult() {
+    return this.arena?.type === 'darkFog' ? (this.arena.projSpeedMult || 0.55) : 1;
+  }
+
+  /** v9.11 BOSS 远程弹：从 (col, 0.5) 向墙飞（直线向下），到墙扣墙血 */
+  _spawnEnemyShot(col, damage, speed) {
+    this._enemyShots.push({ col, row: 0.5, damage, speed, alive: true });
+  }
+
   /**
    * 全局战力（原版语义：战力 = 总攻击力聚合，装备/宝石/佣兵/全局强化全部折算成一个数字）。
    * 镶嵌/拆卸宝石、换装、强化都会即时改变此值——玩家唯一的"变强"指标。
@@ -1098,6 +1165,10 @@ export class GameState {
       resist: cfg.resist, weak: cfg.weak, immuneKnock: !!cfg.immuneKnock,
       resistFreeze: !!cfg.resistFreeze, elementImmune: !!cfg.elementImmune,
       freezeHeal: !!cfg.freezeHeal, healOnHurt: !!cfg.healOnHurt,
+      // v9.10 补齐 6 字段透传（普通怪路径已有，BOSS 路径漏传——免疫/机制字段不生效）
+      dodge: cfg.dodge || 0, stunImmune: !!cfg.stunImmune, burnImmune: !!cfg.burnImmune,
+      negativeResist: !!cfg.negativeResist, negativeTimeResist: cfg.negativeTimeResist || 0,
+      blocksProjectiles: !!cfg.blocksProjectiles, resistKnock: cfg.resistKnock || 0,
     }, 3.5, 0, diffMult, this.rng);
     boss.wallDamageOverride = cfg.wallDamage || 10;
     boss.bossReward = cfg.reward || { gold: 500, diamond: 50 };
@@ -1122,9 +1193,8 @@ export class GameState {
   _getWallDamage(enemy) {
     if (enemy.wallDamageOverride) return enemy.wallDamageOverride;
     const hp = enemy.maxHp;
-    if (hp >= 400) return 4;
-    if (hp >= 150) return 2;
-    return 1;
+    let dmg = hp >= 400 ? 4 : hp >= 150 ? 2 : 1;
+    return dmg + (enemy.wallDamageBonus || 0); // v9.8 精英怪撞墙加成
   }
 
   togglePause() { this.paused = !this.paused; return this.paused; }

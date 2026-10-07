@@ -80,6 +80,12 @@ export class GameScene extends Phaser.Scene {
     this.world = new WorldRenderer(this, this.state);
     this.hud = new HudView(this, this.state);
     this.skillBar = new SkillBar(this, this.state);
+    // v9.14 平衡调试面板（仅 ?debug=1 激活；生产环境不可见）
+    import('./DebugPanel.js').then(({ DebugPanel }) => {
+      if (DebugPanel.enabled && !this.debugPanel) {
+        this.debugPanel = new DebugPanel(this, this.state);
+      }
+    });
     // 点图标 = 立即施放（自动选最佳落点）；数字键 = 选中+瞄准模式
     this.skillBar.onQuickCast = (id) => this.quickCast(id);
     this.skillBar.onSelect = (id) => this.selectSkill(id);
@@ -512,8 +518,27 @@ export class GameScene extends Phaser.Scene {
           else audio.hit();
           break;
         }
-        case 'mercFire': {
-          // 出战佣兵开火反馈：图标高亮脉冲 + 从佣兵位置发出手光圈（用佣兵专属色）
+        case 'rage': {
+          // v9.9 BOSS 狂暴：全屏红光 + 警示字 + 咆哮音
+          this.cameras.main.flash(500, 255, 60, 60);
+          this.cameras.main.shake(400, 0.008);
+          const wt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, `💀 ${ev.name} 进入狂暴！`, {
+            fontSize: '24px', fill: '#ff4444', fontFamily: 'Arial', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 4,
+          }).setOrigin(0.5).setDepth(800);
+          this.tweens.add({ targets: wt, scale: 1.3, alpha: 0, delay: 1200, duration: 600, onComplete: () => wt.destroy() });
+          const dur = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, `无敌 ${ev.duration}s · 攻速移速暴涨`, {
+            fontSize: '13px', fill: '#ffaa88', fontFamily: 'Arial',
+          }).setOrigin(0.5).setDepth(800);
+          this.tweens.add({ targets: dur, alpha: 0, delay: 1800, duration: 500, onComplete: () => dur.destroy() });
+          audio.explode();
+          break;
+        }
+        case 'rageEnd': {
+          this.effects.floatingText(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, '狂暴结束', '#88ff88', 16);
+          break;
+        }
+        case 'mercFire': {          // 出战佣兵开火反馈：图标高亮脉冲 + 从佣兵位置发出手光圈（用佣兵专属色）
           const spr = this._mercSprites?.[ev.slotIdx];
           if (spr) {
             this.tweens.add({ targets: spr, scale: { from: 1.6, to: 1 }, duration: 260, ease: 'Cubic.easeOut' });
@@ -665,6 +690,29 @@ export class GameScene extends Phaser.Scene {
         case 'bossSummon':
           this.effects.floatingText(GAME_WIDTH / 2, 110, '☠️ 召唤爪牙!', '#ffaa44', 16);
           break;
+        case 'bossShoot': {
+          // v9.11 BOSS 远程弹音效+闪光
+          this.effects.floatingText(GAME_WIDTH / 2, 110, '⚡ BOSS 开火!', '#ff6688', 14);
+          break;
+        }
+        case 'arena': {
+          // v9.11 环境效果激活警示
+          const arenaName = { darkFog: '🌫️ 黑暗迷雾：弹速大幅降低！', solarFlare: '☀️ 太阳耀斑：城墙持续灼烧！', empField: '⚡ 电磁场：技能冷却延长！' }[ev.arena] || '环境变化!';
+          this.cameras.main.flash(600, 120, 60, 160);
+          const at = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 90, `${ev.name} 释放 ${arenaName}`, {
+            fontSize: '17px', fill: '#ff88ff', fontFamily: 'Arial', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 4,
+          }).setOrigin(0.5).setDepth(800);
+          this.tweens.add({ targets: at, alpha: 0, delay: 2000, duration: 600, onComplete: () => at.destroy() });
+          break;
+        }
+        case 'arenaEnd': {
+          const et = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 90, '✓ 环境效果解除', {
+            fontSize: '14px', fill: '#88ff88', fontFamily: 'Arial',
+          }).setOrigin(0.5).setDepth(800);
+          this.tweens.add({ targets: et, alpha: 0, delay: 1200, duration: 500, onComplete: () => et.destroy() });
+          break;
+        }
         case 'warnSpeed':
           this.effects.floatingText(GAME_WIDTH / 2, 110, '⚠️ 即将狂暴!', '#ff6644', 16);
           break;
@@ -694,6 +742,14 @@ export class GameScene extends Phaser.Scene {
       const pos = gridToPixel(p.col, p.row);
       const body = this.add.circle(pos.x, pos.y, p.size, p.color).setDepth(120);
       const glow = this.add.circle(pos.x, pos.y, p.size * 1.5, p.color, 0.2).setDepth(118);
+      this.time.delayedCall(70, () => { body.destroy(); glow.destroy(); });
+    }
+    // v9.11 敌方弹（BOSS 远程攻击，紫红色易辨识）
+    for (const s of this.state._enemyShots || []) {
+      if (!s.alive) continue;
+      const pos = gridToPixel(s.col, s.row);
+      const body = this.add.circle(pos.x, pos.y, 5, 0xff4488).setDepth(121);
+      const glow = this.add.circle(pos.x, pos.y, 9, 0xff4488, 0.25).setDepth(119);
       this.time.delayedCall(70, () => { body.destroy(); glow.destroy(); });
     }
   }

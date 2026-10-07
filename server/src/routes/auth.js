@@ -3,7 +3,6 @@ import { AuthService } from '../services/AuthService.js';
 
 const router = express.Router();
 const authService = new AuthService();
-
 router.post('/register', async (req, res) => {
   const { username, password } = req.body || {};
   const r = await authService.register(username, password);
@@ -24,6 +23,14 @@ router.get('/slot', async (req, res) => {
   const slot = await authService.slotFor(username);
   if (!slot) return res.status(404).json({ error: 'user not found' });
   res.json({ slot });
+});
+
+/** v9.13 token 校验：客户端启动时用持久化 token 恢复会话（无需重输密码） */
+router.get('/me', async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
+  const payload = AuthService.verifyToken(token);
+  if (!payload) return res.status(401).json({ success: false, error: 'token 无效或已过期' });
+  res.json({ success: true, userId: payload.userId, username: payload.username });
 });
 
 /** 修改密码（需旧密码验证） */

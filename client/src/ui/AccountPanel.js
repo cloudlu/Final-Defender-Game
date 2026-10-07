@@ -2,17 +2,18 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../engine/GridConstants.js';
 import { AuthClient } from '../repository/AuthClient.js';
 
 /**
- * AccountPanel: 账号设置（修改密码 / 删除账号）。
+ * AccountPanel: 账号设置（修改密码 / 删除账号 / 退出登录）。
  * - 改密：旧密码验证 → 新密码
- * - 删号：输密码 + 勾选确认（进度连同存档永久删除，二次弹确认）
- * - 删除成功/改密后由 onClose 回调处理会话清理与场景重启
+ * - 退出登录：仅清除本地登录态，进度不动，回登录页可换账号
+ * - 删号：输密码 + 最终确认（进度连同存档永久删除）
  */
 export class AccountPanel {
-  constructor(scene, username, { onClose, onDeleted }) {
+  constructor(scene, username, { onClose, onDeleted, onLogout }) {
     this.scene = scene;
     this.username = username;
     this.onClose = onClose;
-    this.onDeleted = onDeleted; // 删除成功回调（清会话+回登录页）
+    this.onDeleted = onDeleted;
+    this.onLogout = onLogout; // 退出登录回调（清会话回登录页，进度保留）
     this._domInputs = [];
     this.build();
   }
@@ -71,6 +72,18 @@ export class AccountPanel {
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => { this._cleanup(); this.container.destroy(); this.onClose?.(); });
     this.container.add(closeBtn);
+
+    // 退出登录（安全区：仅清本地登录态，进度在远端不动，可登录其他账号）
+    const logoutBtn = this.scene.add.text(cx, height / 2 + 230, '↪ 退出登录（切换账号）', {
+      fontSize: '12px', fill: '#66aaff', fontFamily: 'Arial', fontStyle: 'bold',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    logoutBtn.on('pointerdown', () => {
+      this._cleanup();
+      AuthClient.clearSession();
+      this.container.destroy();
+      this.onLogout?.();
+    });
+    this.container.add(logoutBtn);
   }
 
   _makeDomInput(gx, gy, placeholder, isPassword = false) {

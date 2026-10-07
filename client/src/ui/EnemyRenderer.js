@@ -84,15 +84,28 @@ export class EnemyRenderer {
     const pos = gridToPixel(enemy.col, enemy.row);
     // v9.7 BOSS 专属造型：bossMeta（size/color/icon）驱动，远超普通怪的体型+王冠+名条
     const isBoss = !!enemy.isBoss;
+    const isElite = !!enemy.elite && !isBoss; // v9.8 精英怪（BOSS 优先级更高）
     const def = isBoss
       ? { kind: 'boss', color: enemy.bossMeta?.color || 0xcc4444, outline: 0x2a0808, emoji: enemy.bossMeta?.icon || '👑', size: Math.max(30, (enemy.bossMeta?.size || 30) * 0.9) }
       : (ENEMY_DEFS[enemy.configId] || ENEMY_DEFS.enemy_basic);
     const c = this.scene.add.container(pos.x, pos.y).setDepth(isBoss ? 75 : 60);
-    c.setScale(ENEMY_SCALE); // v8.21：全局放大（玩家反馈敌人太小）
+    c.setScale(ENEMY_SCALE * (isElite ? 1.25 : 1)); // v8.21 全局放大 + v9.8 精英 1.25×
 
     const isFlyer = enemy.behavior?.type === 'fly';
     if (!isFlyer) {
       c.add(this.scene.add.ellipse(0, def.size + 3, def.size * 1.6, 5, 0x000000, 0.2));
+    }
+
+    // v9.8 精英怪：金色脉冲描边 + "精英"名条
+    let eliteRing = null;
+    if (isElite) {
+      eliteRing = this.scene.add.circle(0, 0, def.size + 5, 0xffcc44, 0).setDepth(-1);
+      eliteRing.setStrokeStyle(2, 0xffcc44, 0.8);
+      c.add(eliteRing);
+      this.scene.tweens.add({ targets: eliteRing, scale: 1.1, alpha: 0.4, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      c.add(this.scene.add.text(0, -def.size - 20, '精英', {
+        fontSize: '8.5px', fill: '#ffdd66', fontFamily: 'Arial', fontStyle: 'bold',
+      }).setOrigin(0.5));
     }
 
     // BOSS 光环（脉冲圈，出生即辨识度拉满）
@@ -130,7 +143,7 @@ export class EnemyRenderer {
       }).setOrigin(0.5));
     }
 
-    return { enemyId: enemy.id, container: c, body, hpBar, isFlyer, isBoss, bossAura, hpBarW: barW, baseColor: def.color };
+    return { enemyId: enemy.id, container: c, body, hpBar, isFlyer, isBoss, isElite, bossAura, eliteRing, hpBarW: barW, baseColor: def.color };
   }
 
   /** 每种敌人独立造型，返回 { bodyGroup, body }（body 用于状态变色） */

@@ -174,18 +174,21 @@ export class Enemy {
       this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.01 * dt);
     }
 
-    // BOSS speedBurst：预警（warnTimer）后爆发
-    if (this.speedBurst.timer > 0) {
-      this.speedBurst.timer -= dt;
-      speedMul *= this.speedBurst.multiplier;
-    } else if (this.speedBurst.warnTimer > 0) {
-      this.speedBurst.warnTimer -= dt;
-      if (this.speedBurst.warnTimer <= 0) {
-        this.speedBurst.timer = this._burstDuration || 3;
-      }
-    }
+// BOSS speedBurst：预警（warnTimer）后爆发
+if (this.speedBurst.timer > 0) {
+  this.speedBurst.timer -= dt;
+  speedMul *= this.speedBurst.multiplier;
+} else if (this.speedBurst.warnTimer > 0) {
+  this.speedBurst.warnTimer -= dt;
+  if (this.speedBurst.warnTimer <= 0) {
+    this.speedBurst.timer = this._burstDuration || 3;
+  }
+}
 
-    this.row += this.speed * speedMul * this.slowFactor * dt;
+// v9.9 狂暴：独立速度乘区（BossManager 设置 _rageSpeedMult=4）
+if (this._rage && this._rageSpeedMult) speedMul *= this._rageSpeedMult;
+
+this.row += this.speed * speedMul * this.slowFactor * dt;
 
     this.moveTimer += dt;
     if (this.moveTimer >= this.driftChangeInterval) {
@@ -210,6 +213,11 @@ export class Enemy {
    * @returns {boolean} 是否死亡
    */
   takeDamage(damage, element = null, rngLike = null) {
+    // v9.9 狂暴无敌（原版：狂暴期间无敌 15 秒）
+    if (this._rage && this.invulnerable) {
+      this.hitFlash = 0.3;
+      return false;
+    }
     // 弹道闪避（天线僵尸 50%）
     if (this.dodge > 0 && rngLike && rngLike.next() < this.dodge) {
       this.hitFlash = 0.5;

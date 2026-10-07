@@ -35,20 +35,35 @@ export class MenuScene extends Phaser.Scene {
     const cfg = loadGameConfigs();
 
     // ===== 登录门控（v9.0）：未登录显示登录/注册面板，登录后按用户槽位加载存档 =====
-    const session = AuthClient.getSession();
-    if (!session?.username) {
-      this.authPanel = new AuthPanel(this, {
-        onAuthed: (username, slot) => {
-          AuthClient.setSession(username, slot);
-          // v9.3b：走 Phaser 正规生命周期重启（手动调 create() 会在未 shutdown 状态下重入，
-          // 造成元素叠加与后续 restart 状态错乱）
-          this.scene.restart();
-        },
-      });
-      return; // 未登录不渲染主菜单
-    }
-    this.playerId = session.username;
-    this.playerSlot = session.slot || 1;
+    // v9.13：会话恢复改异步 token 校验（/api/auth/me）——校验通过才渲染主菜单，否则显示登录面板
+    this._bootAuth(cfg);
+  }
+
+  /** 登录门控（异步）：token 恢复成功 → 继续 create 主流程；否则显示 AuthPanel 并等待登录 */
+  _bootAuth(cfg) {
+    AuthClient.restore().then(session => {
+      if (!session) {
+        // 未登录/token 过期：显示登录/注册面板（登录成功后 restart 走正常流程）
+        this.authPanel = new AuthPanel(this, {
+          onAuthed: (username, slot) => {
+            // v9.3b：走 Phaser 正规生命周期重启（手动调 create() 会在未 shutdown 状态下重入）
+            this.scene.restart();
+          },
+        });
+        return;
+      }
+      this.playerId = session.username;
+      this.playerSlot = session.slot || 1;
+      this._createAfterAuth(cfg);
+    });
+  }
+
+  /** 登录后的主菜单构建（原 create() 主体，v9.13 拆分以便登录门控异步等待） */
+  _createAfterAuth(cfg) {
+    const { width, height } = this.cameras.main;
+    const cx = width / 2;
+    this.playerId = this.playerId || AuthClient.getSession()?.username || 'player1';
+    this.playerSlot = this.playerSlot || AuthClient.getSession()?.slot || 1;;
 
     // 菜单背景：复用战场背景图（有夜空/城市剪影/月亮），加深色遮罩保证文字可读
     if (!this.textures.exists('battle_bg')) {
@@ -241,7 +256,7 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
-  /** ⚙️ 账号设置（修改密码 / 删除账号） */
+  /** ⚙️ 账号设置（修改密码 / 删除账号 / 退出登录） */
   _openAccountPanel() {
     if (this._accountPanel) return;
     this._accountPanel = new AccountPanel(this, this.playerId, {
@@ -252,6 +267,18 @@ export class MenuScene extends Phaser.Scene {
         this._accountPanel = null;
         this._domCleanup();
         this.scene.restart();
+      },
+      onLogout: () => {
+        // v9.12 退出登录：清会话 + 清 registry 远端标记（换号重新加载）
+        this._accountPanel = null;
+        this._domCleanup();
+        this.registry.remove('remoteApplied_' + (this.playerSlot || 1));
+        this.registry.remove('remoteData_' + (this.playerSlot || 1));
+        this.registry.remove('levelProgress');
+        this.registry.remove('globalSave');
+        this.registry.remove('playerSlot');
+        this.registry.remove('playerId');
+        this.scene.restart(); // session 已清 → 走登录面板分支
       },
     });
   }
