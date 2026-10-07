@@ -61,12 +61,13 @@ export class EnemyRenderer {
         ? Math.sin(timeNow / 180 + e.bobOffset) * 7 - 14
         : Math.sin(e.row * 2 + e.bobOffset) * 1.5;
       s.container.setPosition(pos.x, pos.y + bob);
-      s.hpBar.setSize(22 * Math.max(0, e.hp / e.maxHp), 3);
+      s.hpBar.setSize(s.hpBarW * Math.max(0, e.hp / e.maxHp), 3);
 
       if (e.hitFlash > 0) s.body.setFillStyle(0xffffff);
       else if (e.stunTimer > 0) s.body.setFillStyle(0xffff00);
       else if (e.slowFactor < 1) s.body.setFillStyle(0x66aaff);
       else if (e.dotEffects.length > 0) s.body.setFillStyle(0x88ff44);
+      else if (s.isBoss) s.body.setFillStyle(s.baseColor); // BOSS 恒用专属色（DEFS 无其条目）
       else s.body.setFillStyle((ENEMY_DEFS[e.configId] || ENEMY_DEFS.enemy_basic).color);
     }
   }
@@ -81,8 +82,12 @@ export class EnemyRenderer {
 
   _create(enemy) {
     const pos = gridToPixel(enemy.col, enemy.row);
-    const def = ENEMY_DEFS[enemy.configId] || ENEMY_DEFS.enemy_basic;
-    const c = this.scene.add.container(pos.x, pos.y).setDepth(60);
+    // v9.7 BOSS 专属造型：bossMeta（size/color/icon）驱动，远超普通怪的体型+王冠+名条
+    const isBoss = !!enemy.isBoss;
+    const def = isBoss
+      ? { kind: 'boss', color: enemy.bossMeta?.color || 0xcc4444, outline: 0x2a0808, emoji: enemy.bossMeta?.icon || '👑', size: Math.max(30, (enemy.bossMeta?.size || 30) * 0.9) }
+      : (ENEMY_DEFS[enemy.configId] || ENEMY_DEFS.enemy_basic);
+    const c = this.scene.add.container(pos.x, pos.y).setDepth(isBoss ? 75 : 60);
     c.setScale(ENEMY_SCALE); // v8.21：全局放大（玩家反馈敌人太小）
 
     const isFlyer = enemy.behavior?.type === 'fly';
@@ -90,17 +95,42 @@ export class EnemyRenderer {
       c.add(this.scene.add.ellipse(0, def.size + 3, def.size * 1.6, 5, 0x000000, 0.2));
     }
 
+    // BOSS 光环（脉冲圈，出生即辨识度拉满）
+    let bossAura = null;
+    if (isBoss) {
+      bossAura = this.scene.add.circle(0, 0, def.size + 8, def.color, 0).setDepth(-1);
+      bossAura.setStrokeStyle(3, def.color, 0.55);
+      c.add(bossAura);
+      this.scene.tweens.add({
+        targets: bossAura, scale: 1.12, alpha: 0.35, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+    }
+
     const { bodyGroup, body } = this._buildBody(def);
     c.add(bodyGroup);
 
-    const hpBg = this.scene.add.rectangle(0, -def.size - 10, 22, 3, 0x222222);
+    // BOSS 王冠
+    if (isBoss) {
+      const crown = this.scene.add.triangle(0, -def.size - 14, 0, -10, -9, 0, 9, 0, 0xffcc44);
+      crown.setStrokeStyle(1, 0x886600);
+      c.add(crown);
+    }
+
+    // 血条（BOSS 更宽 + 名条）
+    const barW = isBoss ? 46 : 22;
+    const hpBg = this.scene.add.rectangle(0, -def.size - 10, barW, 3, 0x222222);
     hpBg.setStrokeStyle(1, 0x444444);
     c.add(hpBg);
-    const hpBar = this.scene.add.rectangle(-11, -def.size - 10, 22, 3, 0x44ff44);
+    const hpBar = this.scene.add.rectangle(-barW / 2, -def.size - 10, barW, 3, 0x44ff44);
     hpBar.setOrigin(0, 0.5);
     c.add(hpBar);
+    if (isBoss) {
+      c.add(this.scene.add.text(0, -def.size - 20, enemy.name || 'BOSS', {
+        fontSize: '9px', fill: '#ff8888', fontFamily: 'Arial', fontStyle: 'bold', align: 'center',
+      }).setOrigin(0.5));
+    }
 
-    return { enemyId: enemy.id, container: c, body, hpBar, isFlyer };
+    return { enemyId: enemy.id, container: c, body, hpBar, isFlyer, isBoss, bossAura, hpBarW: barW, baseColor: def.color };
   }
 
   /** 每种敌人独立造型，返回 { bodyGroup, body }（body 用于状态变色） */
@@ -270,6 +300,24 @@ export class EnemyRenderer {
         }
         c.add(this.scene.add.rectangle(0, 5, 10, 2.5, 0x223038));
         c.add(this.scene.add.text(0, s + 8, def.emoji, { fontSize: '10px' }).setOrigin(0.5));
+        break;
+      }
+      case 'boss': {
+        // v9.7 BOSS 专属造型：獠牙 + 怒目 + 角刺，体型来自 def.size（30+）
+        body.setScale(1.15, 1.05);
+        // 怒目（红色大眼）
+        c.add(this.scene.add.circle(-4, -3, 2.6, 0xffdd00));
+        c.add(this.scene.add.circle(4, -3, 2.6, 0xffdd00));
+        c.add(this.scene.add.circle(-4, -3, 1.2, 0x880000));
+        c.add(this.scene.add.circle(4, -3, 1.2, 0x880000));
+        // 獠牙一对
+        for (const dx of [-7, 7]) {
+          c.add(this.scene.add.triangle(dx, s * 0.42, 0, 0, -2.5, -7, 2.5, -7, 0xffffee));
+        }
+        // 顶部角刺三根
+        for (const dx of [-8, 0, 8]) {
+          c.add(this.scene.add.triangle(dx, -s * 0.75, dx + (dx === 0 ? 0 : dx > 0 ? 2 : -2), -s - 9, dx - 3, -s * 0.45, dx + 3, -s * 0.45, 0xffdd66));
+        }
         break;
       }
       default: {

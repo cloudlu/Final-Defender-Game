@@ -585,54 +585,46 @@ export class GameState {
 
     this.player.autoAttackTimer = Math.max(0, this.player.autoAttackTimer - dt);
     const auto = (!this._reloading) ? this.player.autoAttack(this.enemies) : null;
-    if (auto && !this._reloading) {
-      // 消耗弹药（空匣触发在上方统一处理，换弹时间吃攻速加成）
-      this.ammo--;
-      const targets = this.enemies.filter(e => e.alive).sort((a, b) => b.row - a.row);
-      if (targets[0]) {
-        const pierceLv = this.player.getPassiveLevel('pierce');
-        const multiLv = this.player.getPassiveLevel('multishot');
-        const splitLv = this.player.getPassiveLevel('splitshot'); // 分裂：平行多列
-        const giantLv = this.player.getPassiveLevel('giant');
-        const gunMult = (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1);
-        const size = Math.min(7, (2 + (stats.damage - 1) * 1.5) * (1 + 0.4 * giantLv));
-        const color = stats.damage > 1.5 ? 0x88ffcc : 0xffffff;
+      if (auto && !this._reloading) {
+        // 消耗弹药（空匣触发在上方统一处理，换弹时间吃攻速加成）
+        this.ammo--;
+        const targets = this.enemies.filter(e => e.alive).sort((a, b) => b.row - a.row);
+        if (targets[0]) {
+          const pierceLv = this.player.getPassiveLevel('pierce');
+          const multiLv = this.player.getPassiveLevel('multishot');
+          const giantLv = this.player.getPassiveLevel('giant');
+          const gunMult = (1 + (this.gemSpecials?.gunDamage || 0) / 100) * (this.forgeSystem?.getResearchMultiplier() || 1);
+          const size = Math.min(7, (2 + (stats.damage - 1) * 1.5) * (1 + 0.4 * giantLv));
+          const color = stats.damage > 1.5 ? 0x88ffcc : 0xffffff;
 
-        // v9.2 视觉/机制分离：
-        //  连射（multishot）= 真扇形散射：每发独立角度，从枪口呈扇面散开（directional 角度弹）
-        //  分裂（splitshot）= 平行弹幕：与主弹严格平行，仅横向错位（多管机枪齐射感），弹体小一圈
-        const baseAngle = Math.atan2(
-          targets[0].row - this.player.y,
-          targets[0].col - this.player.x
-        );
-        const lanes = 1 + splitLv;
-        const shotsPerLane = 1 + multiLv;
-        const SPREAD_ARC = 0.22; // 连射相邻弹夹角（弧度）≈12.6°
-        const LANE_GAP = 0.9;    // 分裂相邻列横向间距（格）
-
-        for (let lane = 0; lane < lanes; lane++) {
-          const laneIdx = lane - (lanes - 1) / 2;           // -n..0..+n
-          const isMainLane = lane === Math.floor((lanes - 1) / 2);
-          // 分裂：横向平移发射起点（保持角度平行）
-          const px = this.player.x - Math.sin(baseAngle) * laneIdx * LANE_GAP;
-          const py = this.player.y + Math.cos(baseAngle) * laneIdx * LANE_GAP;
-          for (let s = 0; s < shotsPerLane; s++) {
-            const shotIdx = s - (shotsPerLane - 1) / 2;     // -n..0..+n
-            const angle = baseAngle + shotIdx * SPREAD_ARC; // 连射：扇形角
-            const t = targets[(lane * shotsPerLane + s) % targets.length];
-            const isMain = isMainLane && s === Math.floor((shotsPerLane - 1) / 2);
-            this._createProjectile('attack', px, py, angle, 0, {
-              damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * (isMain ? 1 : 0.6) * gunMult,
-              targetEnemy: null,
-              color, size: isMain ? size : size * 0.85,
-              speed: 22, pierce: pierceLv,
-              // 方向速度弹（直线飞行不追点）：angle 形式
-              directionAngle: angle,
-            });
+          // v9.7 连射：主弹追踪必中（targetEnemy 跟飞），副弹方向弹扇形散开打偏移目标——
+          // v9.6 全方向弹后怪移动即打空，瞄准手感丢失
+          const shots = 1 + multiLv;
+          const SPREAD_ARC = 0.22; // 相邻弹夹角 ≈12.6°
+          for (let s = 0; s < shots; s++) {
+            const shotIdx = s - (shots - 1) / 2;
+            const isMain = s === Math.floor((shots - 1) / 2);
+            const t = targets[s % targets.length];
+            if (isMain) {
+              // 主弹：追踪 targetEnemy（锁定发射目标，飞行中跟随）
+              this._createProjectile('attack', this.player.x, this.player.y, t.col, t.row, {
+                damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * gunMult,
+                targetEnemy: t, color, size,
+                speed: 22, pierce: pierceLv,
+              });
+            } else {
+              // 副弹：方向弹朝扇形偏角（打偏移目标位置，允许打空）
+              const angle = Math.atan2(t.row - this.player.y, t.col - this.player.x) + shotIdx * SPREAD_ARC;
+              this._createProjectile('attack', this.player.x, this.player.y, angle, 0, {
+                damage: stats.damage * auto.damage * (1 + 0.1 * giantLv) * 0.6 * gunMult,
+                targetEnemy: null, color, size: size * 0.85,
+                speed: 22, pierce: pierceLv,
+                directionAngle: angle,
+              });
+            }
           }
         }
       }
-    }
 
     // 地面区域场：tick 伤害/减速/冻结
     this.groundZones.update(dt, this.enemies, {
@@ -704,6 +696,11 @@ export class GameState {
           const hitOk = p.angleBullet ? true : (p.lifespan !== null && p.lifespan > 0);
           if (hitOk && distanceCells(p.col, p.row, e.col, e.row) < 0.55) {
             p.hitIds.add(e.id);
+            // v9.6 分裂：主弹（含角度弹）首次命中时溅射
+            if (p.skillId === 'attack' && (p.splitGen || 0) === 0 && !p._isSplitChild && !p._splitDone) {
+              const splitLv = this.player.getPassiveLevel('splitshot');
+              if (splitLv > 0) { p._splitDone = true; this._spawnHitSplits(p, splitLv); }
+            }
             const killed = e.takeDamage(p.damage);
             this.events.push({ type: 'hit', target: e, damage: p.damage, isCrit: false, killed, skill: p.skillId });
             if (killed) this._onKill(e);
@@ -733,10 +730,16 @@ export class GameState {
 
       // 穿透碰撞：命中路径上的敌人（每弹每敌一次），pierceLeft 用尽后消失
       if (p.pierceLeft >= 0 && p.pierceLeft !== undefined) {
+        let splitDone = false;
         for (const e of this.enemies) {
           if (!e.alive || p.hitIds.has(e.id)) continue;
           if (distanceCells(p.col, p.row, e.col, e.row) < 0.6) {
             p.hitIds.add(e.id);
+            // v9.6 分裂：主弹首次命中时溅射（splitGen=0 才触发）
+            if (!splitDone && p.skillId === 'attack' && (p.splitGen || 0) === 0 && !p._isSplitChild) {
+              const splitLv = this.player.getPassiveLevel('splitshot');
+              if (splitLv > 0) { this._spawnHitSplits(p, splitLv); splitDone = true; }
+            }
             const isCrit = this.rng.next() < stats.critRate;
             const dmg = isCrit ? p.damage * stats.critDamage : p.damage;
             const killed = e.takeDamage(dmg);
@@ -794,6 +797,27 @@ export class GameState {
       };
     }
     return null;
+  }
+
+  /** v9.6 分裂被动（splitshot）：主弹命中时从命中点分裂出 2 个 40% 小弹向两侧散射（每级+1 对）。
+   *  与连射（发射期扇形）语义区分：分裂=命中后溅射。splitGen 防止子弹再分裂。 */
+  _spawnHitSplits(p, splitLv) {
+    const base = p.directional ? Math.atan2(p.dirY, p.dirX) : Math.atan2(p.row - this.player.y, p.col - this.player.x);
+    const ARC = 0.5; // 两侧偏角 ≈28.6°
+    for (let k = 0; k < splitLv; k++) {
+      for (const side of [-1, 1]) {
+        const a = base + side * ARC * (k + 1);
+        this._createProjectile('attack', p.col, p.row, a, 0, {
+          damage: p.damage * 0.4,
+          targetEnemy: null, color: p.color, size: Math.max(1.5, (p.size || 2) * 0.7),
+          speed: p.speed * 0.9, pierce: 0,
+          directionAngle: a, splitGen: (p.splitGen || 0) + 1,
+        });
+        const child = this.projectiles[this.projectiles.length - 1];
+        child._isSplitChild = true;
+        child.hitIds.add(p.hitIds.size ? [...p.hitIds][p.hitIds.size - 1] : -1); // 不回伤命中目标
+      }
+    }
   }
 
   /** 弹道终点结算：aoe 爆炸 + 效果；穿透伤害已在路径碰撞中处理 */

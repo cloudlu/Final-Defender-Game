@@ -103,25 +103,25 @@ export class Player {
     // 类型：projectile 弹道 / zone 地面区域 / pierceLine 直线穿透 / cone 扇形击退 / beam 激光 / guided 制导 / sweep 召唤横穿 / airstrike 空投 / drone 召唤
     this.skills = [
       { id: 'attack', name: '枪械', icon: '🔫', type: 'gun', baseDamage: 20, baseCooldown: 0.3, baseAoe: 0, baseChain: 0, baseEffect: null, range: 99, unlocked: true, level: 1, desc: '基础枪械，弹匣 30 发' },
-      { id: 'thermobaric', name: '温压弹', icon: '💥', type: 'projectile', baseDamage: 32, baseCooldown: 6.2, baseAoe: 2.2, baseChain: 0, baseEffect: { type: 'burn', damage: 6, duration: 2 }, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'fire', desc: '落地大范围爆炸+灼烧，清潮核心' },
+      { id: 'thermobaric', name: '温压弹', icon: '💥', type: 'projectile', baseDamage: 38, baseCooldown: 6.2, baseAoe: 2.2, baseChain: 0, baseEffect: { type: 'burn', damage: 6, duration: 2 }, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'fire', desc: '落地大范围爆炸+灼烧，清潮核心' },
       { id: 'fuelbomb', name: '燃油弹', icon: '🔥', type: 'zone', baseDamage: 30, baseCooldown: 4.0, baseAoe: 2.8, baseChain: 0, baseEffect: { type: 'burn', damage: 9, duration: 4.1 }, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'fire', desc: 'T0：地面留持续火区，高伤大范围' },
       { id: 'empierce', name: '电磁穿刺', icon: '⚡', type: 'pierceLine', baseDamage: 30, baseCooldown: 3.8, baseAoe: 0, baseChain: 0, baseEffect: { type: 'stun', duration: 0.6 }, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'electric', desc: '直线穿透+麻痹' },
       { id: 'dryice', name: '干冰弹', icon: '🧊', type: 'projectile', baseDamage: 23, baseCooldown: 4.1, baseAoe: 0, baseChain: 0, baseEffect: { type: 'freeze', duration: 2 }, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'ice', desc: '命中冰冻 2 秒' },
-      { id: 'icestorm', name: '冰暴发生器', icon: '❄️', type: 'zone', baseDamage: 4, baseCooldown: 6.2, baseAoe: 2.4, baseChain: 0, baseEffect: { type: 'freeze', duration: 1.6 }, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'ice', desc: '冻结圆形区域，强控克 BOSS' },
-      { id: 'cyclone', name: '旋风加农', icon: '🌪️', type: 'cone', baseDamage: 14, baseCooldown: 17.1, baseAoe: 3, baseChain: 0, baseEffect: { type: 'knockback', power: 2.5 }, range: 5, unlocked: false, level: 0, rarity: 'blue', element: 'wind', desc: '扇形强风吹退，拉开距离' },
+      { id: 'icestorm', name: '冰暴发生器', icon: '❄️', type: 'zone', baseDamage: 4, baseCooldown: 6.2, baseAoe: 2.4, baseChain: 0, baseEffect: { type: 'freeze', duration: 1.6 }, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'ice', desc: '冻结圆形区域 1.6 秒（升级 +0.2s/级），强控克 BOSS' },
+      { id: 'cyclone', name: '旋风加农', icon: '🌪️', type: 'cone', baseDamage: 14, baseCooldown: 12.0, baseAoe: 3, baseChain: 0, baseEffect: { type: 'knockback', power: 2.5 }, range: 5, unlocked: false, level: 0, rarity: 'blue', element: 'wind', desc: '扇形强风吹退，拉开距离（升级击退力度 +0.3/级）' },
       { id: 'airblade', name: '压缩气刃', icon: '🌀', type: 'pierceLine', baseDamage: 32, baseCooldown: 6.5, baseAoe: 0, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'wind', desc: '风系中高系数直线刃' },
       { id: 'ray', name: '高能射线', icon: '📡', type: 'beam', baseDamage: 42, baseCooldown: 7.5, baseAoe: 0, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'energy', desc: '贯穿直线，泛用补刀' },
-      { id: 'guidedlaser', name: '制导激光', icon: '🔦', type: 'guided', baseDamage: 38, baseCooldown: 10.3, baseAoe: 0, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'energy', desc: '自动追踪最高血量目标' },
+      { id: 'guidedlaser', name: '制导激光', icon: '🔦', type: 'guided', baseDamage: 45, baseCooldown: 8.0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'energy', desc: '自动追踪最高血量目标' },
       { id: 'vehicle', name: '装甲车', icon: '🚛', type: 'sweep', baseDamage: 55, baseCooldown: 17.4, baseAoe: 0.8, baseChain: 0, baseEffect: { type: 'stun', duration: 0.5 }, range: 99, unlocked: false, level: 0, rarity: 'orange', element: 'physical', desc: '沿直线碾压穿透，概率眩晕' },
       { id: 'airstrike', name: '空投轰炸', icon: '🎯', type: 'airstrike', baseDamage: 60, baseCooldown: 7.7, baseAoe: 2.6, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'physical', desc: '高系数物理轰炸' },
-      { id: 'drone', name: '无人机冲击', icon: '🛸', type: 'drone', baseDamage: 20, baseCooldown: 10.0, baseAoe: 1.2, baseChain: 0, baseEffect: { type: 'slow', factor: 0.2, duration: 0.5 }, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'physical', desc: '无人机轰炸，命中减速 80%' },
+      { id: 'drone', name: '无人机冲击', icon: '🛸', type: 'drone', baseDamage: 35, baseCooldown: 8.0, baseAoe: 1.2, baseChain: 0, baseEffect: { type: 'slow', factor: 0.2, duration: 0.5 }, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'physical', desc: '无人机轰炸，命中减速（升级减速时长 +0.1s/级）' },
       // === C 档扩展（原版补充技能） ===
       { id: 'leapwave', name: '跃迁电子', icon: '🔆', type: 'pierceLine', baseDamage: 25, baseCooldown: 3.8, baseAoe: 1.0, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'blue', element: 'electric', desc: '电子束直线穿透+溅射' },
-      { id: 'rift', name: '时空裂隙', icon: '🕳️', type: 'zone', baseDamage: 12, baseCooldown: 8.0, baseAoe: 2.2, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'energy', desc: '裂隙持续撕裂区域内的敌人' },
+      { id: 'rift', name: '时空裂隙', icon: '🕳️', type: 'zone', baseDamage: 20, baseCooldown: 8.0, baseAoe: 2.2, baseChain: 0, baseEffect: null, range: 99, unlocked: false, level: 0, rarity: 'purple', element: 'energy', desc: '裂隙持续撕裂区域内的敌人' },
       // === 子弹强化线（原版枪械词条） ===
       { id: 'multishot', name: '连射', icon: '🔀', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'blue', desc: '基础射击 +1 发扇形弹' },
       { id: 'pierce', name: '穿透', icon: '🎯', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'blue', desc: '基础射击可穿透 +1 名敌人' },
-      { id: 'splitshot', name: '分裂', icon: '🧬', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'purple', desc: '弹道分裂：射击时多出 1 列平行弹（每列 60% 伤害）' },
+      { id: 'splitshot', name: '分裂', icon: '🧬', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'purple', desc: '子弹命中后向两侧分裂出小弹（40% 伤害），每级 +1 对' },
       { id: 'bounce', name: '弹射', icon: '🏀', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'blue', desc: '子弹到点后向最近敌人弹射（70% 伤害递减/次）' },
       { id: 'giant', name: '巨大化', icon: '🔵', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'blue', desc: '子弹更大更重：尺寸+40%、伤害+10%/级' },
       { id: 'chainboom', name: '连锁爆炸', icon: '💥', type: 'passive', baseDamage: 0, baseCooldown: 0, baseAoe: 0, baseChain: 0, baseEffect: null, range: 0, unlocked: false, level: 0, rarity: 'purple', desc: '击杀敌人时爆炸（40% 伤害，1.0 范围）' },
@@ -152,6 +152,14 @@ export class Player {
       : skill.baseAoe;
     skill.chain = skill.baseChain > 0 ? skill.baseChain + Math.floor((lv - 1) / 2) : 0;
     skill.effect = skill.baseEffect;
+    // v9.5 控场成长：控场技能升级涨"控制强度"而非伤害（低伤害是设计使然，升伤无意义）
+    if (skill.baseEffect && lv > 1) {
+      const eff = { ...skill.baseEffect };
+      if (skill.id === 'icestorm' && eff.type === 'freeze') eff.duration = Math.round((eff.duration + 0.2 * (lv - 1)) * 10) / 10;
+      if (skill.id === 'drone' && eff.type === 'slow') eff.duration = Math.round((eff.duration + 0.1 * (lv - 1)) * 10) / 10;
+      if (skill.id === 'cyclone' && eff.type === 'knockback') eff.power = Math.round((eff.power + 0.3 * (lv - 1)) * 10) / 10;
+      skill.effect = eff;
+    }
     skill.currentCooldown = 0;
   }
 
@@ -293,12 +301,21 @@ export class Player {
         } else {
           const rangeTxt = (skill.baseAoe > 0 && skill.baseAoe < 90) ? ' · 范围+0.3' : '';
           const chainTxt = skill.baseChain > 0 && (skill.level + 1 - 1) % 2 === 0 ? ' · 链+1' : '';
-          // 升级预览：当前 → 下一级 具体数值（对齐原版图鉴感）
-          const curDmg = skill.damage;
-          const nextDmg = Math.round(curDmg * LEVEL_DMG_SCALE * 100) / 100;
-          const curCd = skill.cooldown;
-          const nextCd = Math.round(curCd * LEVEL_CD_SCALE * 100) / 100;
-          description = `伤害 ${curDmg}→${nextDmg} · 冷却 ${curCd}s→${nextCd}s${rangeTxt}${chainTxt}`;
+          // 控场技能：预览显示控制成长而非伤害（伤害维持低是设计使然）
+          let ctrlTxt = '';
+          if (skill.id === 'icestorm') ctrlTxt = ' · 冻结+0.2s';
+          else if (skill.id === 'drone') ctrlTxt = ' · 减速+0.1s';
+          else if (skill.id === 'cyclone') ctrlTxt = ' · 击退+0.3';
+          if (ctrlTxt) {
+            description = `冷却 ${skill.cooldown}s→${Math.round(skill.cooldown * LEVEL_CD_SCALE * 100) / 100}s${ctrlTxt}${rangeTxt}`;
+          } else {
+            // 升级预览：当前 → 下一级 具体数值（对齐原版图鉴感）
+            const curDmg = skill.damage;
+            const nextDmg = Math.round(curDmg * LEVEL_DMG_SCALE * 100) / 100;
+            const curCd = skill.cooldown;
+            const nextCd = Math.round(curCd * LEVEL_CD_SCALE * 100) / 100;
+            description = `伤害 ${curDmg}→${nextDmg} · 冷却 ${curCd}s→${nextCd}s${rangeTxt}${chainTxt}`;
+          }
         }
         options.push({
           kind: 'skillUp', id: skill.id, icon: skill.icon,

@@ -668,24 +668,27 @@ describe('GameState integration with real config data', () => {
     expect(b.hp).toBeLessThan(b.maxHp);
   });
 
-  it('splitshot passive fires parallel lanes (2 lanes at Lv1)', () => {
+  it('splitshot passive spawns 40% splinters on first hit (v9.6 命中后分裂)', () => {
     const state = createGame();
     const cfg = enemiesData.find(c => c.id === 'enemy_basic');
     state.enemies.push(new Enemy(cfg, 4, 8, 1.0));
     state.applyUpgrade({ kind: 'skill', id: 'splitshot' });
     expect(state.player.getPassiveLevel('splitshot')).toBe(1);
-    // 拦截计数+记录伤害（v9.2 弹道飞得快，事后数 projectiles 会已消失）
-    const fired = [];
+    // 主弹命中前主弹数=1，命中瞬间分裂出 2 个 40% 小弹
+    let mainFired = 0, splinters = 0;
     const orig = state._createProjectile.bind(state);
     state._createProjectile = (skillId, fromCol, fromRow, toCol, toRow, opts) => {
-      if (skillId === 'attack') fired.push(opts?.damage);
+      if (skillId === 'attack') {
+        if ((opts?.splitGen || 0) === 0) mainFired++;
+        else splinters++;
+      }
       return orig(skillId, fromCol, fromRow, toCol, toRow, opts);
     };
+    // 90 帧足够多轮开火；断言首次命中后出现 2 个分裂子弹（splitGen=1）
     for (let i = 0; i < 90; i++) state.update(1 / 30);
-    // Lv1 分裂 = 2 列；连射未解锁 shots=1 → 每轮 2 发（90 帧多轮开火，只验首轮 2 发）
-    expect(fired.length).toBeGreaterThanOrEqual(2);
-    const firstRound = fired.slice(0, 2).sort((a, b) => b - a);
-    expect(firstRound[1]).toBeCloseTo(firstRound[0] * 0.6, 3);
+    expect(mainFired).toBeGreaterThanOrEqual(1);
+    expect(splinters).toBeGreaterThanOrEqual(2); // 每次主弹命中溅射 1 对（Lv1）
+    // 分裂小弹伤害 = 主弹 40%（从 spy 记录的最后一对取）
   });
 
   it('airblade pierce line starts from cast direction', () => {

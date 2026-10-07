@@ -823,6 +823,7 @@ export class ForgePanel {
       c.on('pointerdown', onClick);
     };
     // 全部 chip + 词条 chips（横向排，超宽换行到第二行）
+    let filterRows = 1;
     {
       const chips = [{ id: null, label: '全部' }, ...affixOptions.map(id => ({
         id,
@@ -841,8 +842,8 @@ export class ForgePanel {
         });
         fx += w + 6;
       }
+      filterRows = row + 1;
     }
-    const filterRows = row + 1;
     const listTopBase = filterY + 14 + filterRows * 26;
 
     const filtered = curFilter ? bag.filter(u => this.gems.save.collection[u].affixId === curFilter) : bag;
